@@ -26,18 +26,6 @@
 
 <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;background:#EFE6DA">
 
-<!-- DEMO-START : interface de démonstration (retirée dans la version exportable) -->
-<div style="position:sticky;top:0;z-index:80;width:100%;display:flex;justify-content:center;padding:10px 12px;background:linear-gradient(#EFE6DA,rgba(239,230,218,.86));backdrop-filter:blur(6px)">
-  <div style="display:flex;align-items:center;gap:8px;padding:6px;background:#2E2723;border-radius:999px;box-shadow:0 6px 20px rgba(46,39,35,.22)">
-    <span style="font:500 10px/1 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);padding:0 8px 0 12px">Aperçu</span>
-    <button onClick="{{ setMobile }}" style="{{ tabMobileStyle }}">Mobile</button>
-    <button onClick="{{ setDesktop }}" style="{{ tabDesktopStyle }}">Ordinateur</button>
-    <span style="width:1px;height:20px;background:rgba(255,255,255,.16)"></span>
-    <span style="font:400 11px/1 'Work Sans';color:rgba(255,255,255,.62);padding:0 12px 0 4px">{{ routeLabel }}</span>
-  </div>
-</div>
-<!-- DEMO-END -->
-
 <div style="{{ shellOuter }}">
 <div style="{{ shellInner }}">
 
@@ -1324,9 +1312,7 @@ class Component extends DCLogic {
     const s = this.state;
     const stock = this._sheetSettings?.['commande.afficher_stock'] ? this._sheetSettings['commande.afficher_stock'] === 'Oui' : this.props.afficherStock !== false;
     const delai = this._sheetSettings?.['commande.delai_reponse'] || this.props.dureeReponse || 'dans les deux heures';
-    const forced = s.modeForce || this.props.vueDefaut || 'mobile';
-    const isMobile = forced === 'mobile' ? true : s.vw < 900;
-    const framed = forced === 'mobile';
+    const isMobile = s.vw < 900;
 
     const plats = PLATS.map(p => this.mapPlat(p));
     const dispos = plats.filter(p => p.dispo !== 'preco');
@@ -1406,9 +1392,6 @@ class Component extends DCLogic {
     }
 
     const formOk = s.form.ok && s.form.nom.trim().length > 1 && s.form.tel.trim().length > 5 && !!creneauObj && count > 0;
-    const tab = (on) => "min-height:36px;padding:9px 15px;border-radius:999px;border:0;cursor:pointer;font:500 12.5px/1 'Work Sans';background:" + (on ? '#FBF6EE' : 'transparent') + ';color:' + (on ? '#2E2723' : 'rgba(255,255,255,.7)');
-    const routeLabels = { home:"Page d'accueil", plats:'Les plats', fiche:'Fiche produit', panier:'Panier', commande:'Commande & créneau', confirm:'Confirmation' };
-
     const mobileTabs = [
       { icon:'maison', label:'Accueil', key:'home', go:() => this.nav('home') },
       { icon:'marmite', label:'Les plats', key:'plats', go:() => this.nav('plats') },
@@ -1426,19 +1409,11 @@ class Component extends DCLogic {
     const showCartBar = isMobile && count > 0 && ['home', 'plats', 'fiche'].indexOf(s.route) >= 0;
 
     return {
-      isMobile, isDesktop: !isMobile, showStatusBar: framed,
-      setMobile: () => this.setState({ modeForce:'mobile' }),
-      setDesktop: () => this.setState({ modeForce:'desktop', vw:window.innerWidth }),
-      tabMobileStyle: tab(framed), tabDesktopStyle: tab(!framed),
-      routeLabel: routeLabels[s.route], delai,
+      isMobile, isDesktop: !isMobile, showStatusBar: false, delai,
 
-      shellOuter: framed
-        ? 'width:412px;max-width:100%;margin:8px auto 60px;padding:12px;border-radius:56px;background:linear-gradient(160deg,#3A322C,#1E1A17);box-shadow:0 30px 70px rgba(46,39,35,.4)'
-        : 'width:100%;max-width:1440px;margin:0 auto 40px;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(46,39,35,.16);background:#FBF6EE',
-      shellInner: framed
-        ? 'position:relative;height:820px;border-radius:44px;overflow:hidden;background:#FBF6EE;display:flex;flex-direction:column'
-        : 'position:relative;background:#FBF6EE',
-      scrollerStyle: framed ? 'flex:1;overflow-y:auto;background:#FBF6EE' : 'background:#FBF6EE',
+      shellOuter: 'width:100%;max-width:1440px;margin:0 auto;background:#FBF6EE',
+      shellInner: 'position:relative;background:#FBF6EE',
+      scrollerStyle: 'background:#FBF6EE',
 
       sectionStyle: 'padding:' + pad + ';' + inner,
       sectionAltStyle: 'background:#3B322B;padding:' + (isMobile ? '30px 0' : '62px 0') + ';margin-top:' + (isMobile ? '16px' : '28px'),
