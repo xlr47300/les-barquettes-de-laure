@@ -792,7 +792,7 @@
 
   <!-- ══ sélecteur format / conservation / quantité ══ -->
   <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
-    <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;z-index:96;background:rgba(46,39,35,.45);backdrop-filter:blur(2px)"></div>
+    <div onClick="{{ closeSheet }}" style="position:fixed;inset:0;z-index:96;background:rgba(46,39,35,.45);backdrop-filter:blur(2px)"></div>
     <div style="{{ sheetWrapStyle }}">
       <div style="{{ sheetStyle }}">
         <div style="display:flex;gap:13px;align-items:flex-start;padding:20px 20px 0">
@@ -860,7 +860,7 @@
 
   <!-- ══ tiroir panier ══ -->
   <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
-    <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;z-index:90;background:rgba(46,39,35,.42);backdrop-filter:blur(2px)"></div>
+    <div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;z-index:90;background:rgba(46,39,35,.42);backdrop-filter:blur(2px)"></div>
     <aside style="{{ drawerStyle }}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 20px;border-bottom:1px solid rgba(138,75,42,.13)">
         <h2 style="margin:0;font:600 20px/1.2 'Petrona',serif;color:#2E2723">Votre panier</h2>
@@ -1293,7 +1293,9 @@ class Component extends DCLogic {
       badges: this.badgeList(p.badges),
       thumbStyle: this.photoBox(p.tint, '88px') + ';width:88px;flex:none;border-radius:12px',
       open: () => { this.setState({ productId:p.id, ficheVariant:'indiv', ficheConservation:p.conservations[0], ficheQty:1 }); this.nav('fiche'); },
-      add: () => (p.variants.length > 1 || p.conservations.length > 1) ? this.openSheet(p.id) : this.addToCart(p.id, v0.id, p.conservations[0], 1)
+      add: () => (p.variants.length > 1 || p.conservations.length > 1)
+        ? this.openSheet(p.id)
+        : this.addToCart(p.id, v0.id, p.conservations[0], 1)
     };
   }
 
@@ -1492,7 +1494,7 @@ class Component extends DCLogic {
       sheetPlus: () => this.setState({ sheetQty: Math.min(9, s.sheetQty + 1) }),
       sheetMinus: () => this.setState({ sheetQty: Math.max(1, s.sheetQty - 1) }),
       sheetAdd: () => { if (sp) this.addToCart(sp.id, spVariant.id, spCons, s.sheetQty); },
-      sheetWrapStyle: 'position:absolute;inset:0;z-index:97;display:flex;align-items:' + (isMobile ? 'flex-end' : 'center') + ';justify-content:center;padding:' + (isMobile ? '0' : '24px') + ';pointer-events:none',
+      sheetWrapStyle: 'position:fixed;inset:0;z-index:97;display:flex;align-items:' + (isMobile ? 'flex-end' : 'center') + ';justify-content:center;padding:' + (isMobile ? '0' : '24px') + ';pointer-events:none',
       sheetStyle: 'pointer-events:auto;display:flex;flex-direction:column;width:' + (isMobile ? '100%' : '520px') + ';max-width:100%;max-height:' + (isMobile ? '88%' : '90%') + ';background:#FBF6EE;border-radius:' + (isMobile ? '26px 26px 0 0' : '24px') + ';box-shadow:0 -12px 40px rgba(46,39,35,.28);overflow:hidden',
 
       cartLines, cartCount:count, cartEmpty:count === 0, cartHasItems:count > 0,
@@ -1505,14 +1507,14 @@ class Component extends DCLogic {
         : 'display:none',
       mobileTabs, showCartBar,
       setScroller: (el) => { this._sc = el; },
-      cartBarStyle: 'position:absolute;left:12px;right:12px;bottom:86px;z-index:58;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:10px 16px;border:0;border-radius:18px;background:#2E2723;color:#FBF6EE;cursor:pointer;box-shadow:0 10px 26px rgba(46,39,35,.3)',
-      tabBarStyle: 'position:absolute;left:0;right:0;bottom:0;z-index:60;background:rgba(251,246,238,.97);backdrop-filter:blur(12px);border-top:1px solid rgba(138,75,42,.14);padding:8px 10px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px',
+      cartBarStyle: 'position:fixed;left:12px;right:12px;bottom:86px;z-index:58;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:10px 16px;border:0;border-radius:18px;background:#2E2723;color:#FBF6EE;cursor:pointer;box-shadow:0 10px 26px rgba(46,39,35,.3)',
+      tabBarStyle: 'position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(251,246,238,.97);backdrop-filter:blur(12px);border-top:1px solid rgba(138,75,42,.14);padding:8px 10px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px',
 
       drawerOpen: s.drawerOpen,
       openDrawer: () => this.setState({ drawerOpen:true }),
       closeDrawer: () => this.setState({ drawerOpen:false }),
       drawerToPanier: () => this.nav('panier'),
-      drawerStyle: 'position:absolute;top:0;right:0;bottom:0;z-index:95;width:' + (isMobile ? '100%' : '400px') + ';background:#FBF6EE;display:flex;flex-direction:column;box-shadow:-14px 0 40px rgba(46,39,35,.22)',
+      drawerStyle: 'position:fixed;top:0;right:0;bottom:0;z-index:95;width:' + (isMobile ? '100%' : '400px') + ';background:#FBF6EE;display:flex;flex-direction:column;box-shadow:-14px 0 40px rgba(46,39,35,.22)',
 
       steps: ['Panier', 'Créneau', 'Confirmation'].map((l, i) => {
         const cur = i === 1;
@@ -1544,7 +1546,7 @@ class Component extends DCLogic {
       ].map(x => ({ ...x, iconPath:this.icon(x.icon) })),
 
       toast: s.toast,
-      toastStyle: 'position:absolute;left:50%;transform:translateX(-50%);bottom:' + (isMobile ? (showCartBar ? '154px' : '96px') : '28px') + ";z-index:99;display:flex;align-items:center;gap:9px;padding:14px 20px;border-radius:999px;background:#2E2723;color:#FBF6EE;font:400 13.5px/1.3 'Work Sans';box-shadow:0 10px 30px rgba(46,39,35,.3);max-width:86%;text-align:left"
+      toastStyle: 'position:fixed;left:50%;transform:translateX(-50%);bottom:' + (isMobile ? (showCartBar ? '154px' : '96px') : '28px') + ";z-index:99;display:flex;align-items:center;gap:9px;padding:14px 20px;border-radius:999px;background:#2E2723;color:#FBF6EE;font:400 13.5px/1.3 'Work Sans';box-shadow:0 10px 30px rgba(46,39,35,.3);max-width:86%;text-align:left"
     };
   }
 }

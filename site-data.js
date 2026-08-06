@@ -85,13 +85,16 @@ window.SiteData = (() => {
 
     const plats = source.Plats.filter((row) => yes(cell(row, "Actif"))).map((row) => {
       const id = cell(row, "ID plat");
+      const conservation = cell(row, "Conservation principale");
+      const conservations = [conservation, ...split(cell(row, "Conservations proposées"))]
+        .filter((value, index, values) => value && values.indexOf(value) === index);
       return {
         id,
         nom: cell(row, "Nom"),
         desc: cell(row, "Description courte"),
         categorie: cell(row, "Catégorie"),
-        conservation: cell(row, "Conservation principale"),
-        conservations: split(cell(row, "Conservations proposées")),
+        conservation,
+        conservations,
         dispo: availability(cell(row, "Disponibilité")),
         reste: number(cell(row, "Stock")),
         retrait: cell(row, "Date de retrait"),
