@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les Barquettes de Laure</title>
+<meta name="description" content="Des petits plats maison cuisinés en petites quantités, à retirer près de Villeneuve-sur-Lot.">
+<meta name="theme-color" content="#FBF6EE">
+<link rel="icon" type="image/png" href="uploads/Logo%20les%20barquettes%20de%20Laure.png">
 <script src="./site-data.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -42,11 +46,9 @@
     <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
       <header style="position:sticky;top:0;z-index:40;background:rgba(251,246,238,.95);backdrop-filter:blur(10px);border-bottom:1px solid rgba(138,75,42,.13)">
         <div style="max-width:1240px;margin:0 auto;padding:14px 40px;display:flex;align-items:center;gap:28px">
-          <button onClick="{{ goHome }}" title="Les Barquettes de Laure — accueil" style="display:flex;align-items:center;gap:10px;height:52px;padding:8px 14px 8px 10px;border:1px dashed rgba(138,75,42,.4);border-radius:14px;background:rgba(244,234,220,.5);cursor:pointer;text-align:left">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#8A4B2A" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9.5h16l-1.6 7.4a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6L4 9.5Z M7 9.5 8.6 6h6.8l1.6 3.5 M13.4 12.2h3.3v3h-3.3z"></path></svg>
-            <span style="display:flex;flex-direction:column;gap:3px">
-              <span style="font:600 13px/1 'Petrona',serif;letter-spacing:.06em;text-transform:uppercase;color:#5A3D2B">Les Barquettes de Laure</span>
-              <span style="font:400 8.5px/1 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:#A9998C">Emplacement logo horizontal</span>
+          <button onClick="{{ goHome }}" title="Les Barquettes de Laure — accueil" aria-label="Retour à l'accueil" style="display:flex;align-items:center;justify-content:center;width:148px;height:96px;padding:3px 8px;border:0;background:transparent;cursor:pointer">
+            <span style="position:relative;display:block;width:132px;height:90px;overflow:hidden;background:transparent">
+              <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure" style="position:absolute;width:211px;max-width:none;height:auto;left:-41px;top:-24px;mix-blend-mode:multiply">
             </span>
           </button>
           <nav style="display:flex;gap:2px;margin-left:auto;align-items:center">
@@ -69,11 +71,9 @@
 
     <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
       <header style="position:sticky;top:0;z-index:40;background:rgba(251,246,238,.96);backdrop-filter:blur(10px);border-bottom:1px solid rgba(138,75,42,.12);padding:10px 16px;display:flex;align-items:center;gap:10px">
-        <button onClick="{{ goHome }}" title="Les Barquettes de Laure — accueil" style="display:flex;align-items:center;gap:9px;height:48px;padding:7px 12px 7px 9px;border:1px dashed rgba(138,75,42,.4);border-radius:13px;background:rgba(244,234,220,.5);cursor:pointer;text-align:left">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#8A4B2A" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9.5h16l-1.6 7.4a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6L4 9.5Z M7 9.5 8.6 6h6.8l1.6 3.5 M13.4 12.2h3.3v3h-3.3z"></path></svg>
-          <span style="display:flex;flex-direction:column;gap:2px">
-            <span style="font:600 11px/1.1 'Petrona',serif;letter-spacing:.05em;text-transform:uppercase;color:#5A3D2B">Les Barquettes<br>de Laure</span>
-            <span style="font:400 7.5px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#A9998C">Logo horizontal</span>
+        <button onClick="{{ goHome }}" title="Les Barquettes de Laure — accueil" aria-label="Retour à l'accueil" style="display:flex;align-items:center;justify-content:center;width:114px;height:76px;padding:3px 6px;border:0;background:transparent;cursor:pointer">
+          <span style="position:relative;display:block;width:102px;height:69px;overflow:hidden;background:transparent">
+            <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure" style="position:absolute;width:163px;max-width:none;height:auto;left:-32px;top:-19px;mix-blend-mode:multiply">
           </span>
         </button>
         <button onClick="{{ openDrawer }}" title="Panier" style="position:relative;margin-left:auto;width:46px;height:46px;border-radius:13px;border:1px solid rgba(138,75,42,.2);background:#FBF6EE;cursor:pointer;display:flex;align-items:center;justify-content:center">
@@ -723,7 +723,7 @@
           <button onClick="{{ goPlats }}" style="min-height:52px;padding:16px 22px;border-radius:999px;border:1px solid rgba(138,75,42,.25);background:transparent;color:#8A4B2A;font:500 14.5px/1 'Work Sans';cursor:pointer">Continuer à regarder les plats</button>
           <button onClick="{{ goHome }}" style="min-height:52px;padding:16px 22px;border-radius:999px;border:0;background:#2E2723;color:#FBF6EE;font:500 14.5px/1 'Work Sans';cursor:pointer">Retour à l'accueil</button>
         </div>
-        <p style="margin:4px 0 0;font:300 13px/1.6 'Work Sans';color:#8A9078">Une question ? Écrivez-moi au 06 12 34 56 78.</p>
+        <p style="margin:4px 0 0;font:300 13px/1.6 'Work Sans';color:#8A9078">Une question ? Écrivez-moi au {{ contactPhone }}.</p>
       </div>
     </main>
     </sc-if>
@@ -733,35 +733,24 @@
       <div style="{{ footerInner }}">
         <div style="display:flex;flex-wrap:wrap;gap:28px;justify-content:space-between">
           <div style="flex:1 1 230px;min-width:210px;display:flex;flex-direction:column;gap:12px">
-            <span style="background:#FBF6EE;border-radius:14px;padding:10px 14px;width:fit-content;max-width:100%">
-              <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure — des petits plats maison, prêts quand vous l'êtes" style="display:block;width:180px;max-width:100%;height:auto">
+            <span style="position:relative;display:block;width:170px;height:116px;overflow:hidden;background:#fff;border-radius:10px">
+              <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure — des petits plats maison, prêts quand vous l'êtes" style="position:absolute;width:272px;max-width:none;height:auto;left:-53px;top:-31px">
             </span>
             <p style="margin:0;font:300 13.5px/1.65 'Work Sans';color:rgba(251,246,238,.66);max-width:26em">Cuisine préparée à domicile, déclarée en atelier de remise directe.</p>
           </div>
           <div style="flex:1 1 160px;min-width:150px;display:flex;flex-direction:column;gap:9px">
             <span style="font:500 11px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#B79A7E">Retrait</span>
             <span style="font:300 13.5px/1.6 'Work Sans';color:rgba(251,246,238,.78)">Secteur Villeneuve-sur-Lot, Pujols, Bias, Sainte-Livrade</span>
-            <span style="font:300 13.5px/1.6 'Work Sans';color:rgba(251,246,238,.78)">Mercredi &amp; vendredi 17h–19h<br>Samedi 10h–12h</span>
+            <span style="font:300 13.5px/1.6 'Work Sans';color:rgba(251,246,238,.78)">{{ footerSchedule }}</span>
           </div>
           <div style="flex:1 1 160px;min-width:150px;display:flex;flex-direction:column;gap:9px">
             <span style="font:500 11px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#B79A7E">Me joindre</span>
-            <span style="font:300 13.5px/1.6 'Work Sans';color:rgba(251,246,238,.78)">06 12 34 56 78<br>bonjour@barquettesdelaure.fr</span>
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <a href="#" style="padding:10px 14px;border-radius:999px;border:1px solid rgba(251,246,238,.22);font:400 12.5px/1 'Work Sans';color:rgba(251,246,238,.8)">Instagram</a>
-              <a href="#" style="padding:10px 14px;border-radius:999px;border:1px solid rgba(251,246,238,.22);font:400 12.5px/1 'Work Sans';color:rgba(251,246,238,.8)">Facebook</a>
-            </div>
-          </div>
-          <div style="flex:1 1 160px;min-width:150px;display:flex;flex-direction:column;gap:9px">
-            <span style="font:500 11px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#B79A7E">Informations</span>
-            <a href="#" style="font:300 13.5px/1.5 'Work Sans';color:rgba(251,246,238,.78)">Conditions de commande</a>
-            <a href="#" style="font:300 13.5px/1.5 'Work Sans';color:rgba(251,246,238,.78)">Confidentialité</a>
-            <a href="#" style="font:300 13.5px/1.5 'Work Sans';color:rgba(251,246,238,.78)">Mentions légales</a>
-            <a href="#" style="font:300 13.5px/1.5 'Work Sans';color:rgba(251,246,238,.78)">Allergènes &amp; conservation</a>
+            <span style="font:300 13.5px/1.6 'Work Sans';color:rgba(251,246,238,.78)">{{ contactPhone }}<br>{{ contactEmail }}</span>
           </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;margin-top:26px;padding-top:16px;border-top:1px solid rgba(251,246,238,.14);font:300 12px/1.5 'Work Sans';color:rgba(251,246,238,.5)">
-          <span>© 2026 Les Barquettes de Laure · SIRET 000 000 000 00000 (fictif)</span>
-          <span>Maquette · photographies à fournir</span>
+          <span>© 2026 Les Barquettes de Laure</span>
+          <span>Des plats maison cuisinés en petites quantités</span>
         </div>
       </div>
     </footer>
@@ -1312,6 +1301,8 @@ class Component extends DCLogic {
     const s = this.state;
     const stock = this._sheetSettings?.['commande.afficher_stock'] ? this._sheetSettings['commande.afficher_stock'] === 'Oui' : this.props.afficherStock !== false;
     const delai = this._sheetSettings?.['commande.delai_reponse'] || this.props.dureeReponse || 'dans les deux heures';
+    const contactPhone = this._sheetSettings?.['contact.telephone'] || '06 12 34 56 78';
+    const contactEmail = this._sheetSettings?.['contact.email'] || 'bonjour@barquettesdelaure.fr';
     const isMobile = s.vw < 900;
 
     const plats = PLATS.map(p => this.mapPlat(p));
@@ -1396,7 +1387,7 @@ class Component extends DCLogic {
       { icon:'maison', label:'Accueil', key:'home', go:() => this.nav('home') },
       { icon:'marmite', label:'Les plats', key:'plats', go:() => this.nav('plats') },
       { icon:'panier', label:'Panier', key:'panier', go:() => this.nav('panier') },
-      { icon:'telephone', label:'Contact', key:'contact', go:() => this.flash((this._sheetSettings?.['contact.telephone'] || '06 12 34 56 78') + ' · ' + (this._sheetSettings?.['contact.email'] || 'bonjour@barquettesdelaure.fr')) }
+      { icon:'telephone', label:'Contact', key:'contact', go:() => this.flash(contactPhone + ' · ' + contactEmail) }
     ].map(t => {
       const on = t.key === s.route;
       return { label:t.label, go:t.go, iconPath:this.icon(t.icon),
@@ -1410,6 +1401,8 @@ class Component extends DCLogic {
 
     return {
       isMobile, isDesktop: !isMobile, showStatusBar: false, delai,
+      contactPhone, contactEmail,
+      footerSchedule: JOURS.map(j => j.jour + ' ' + j.plage).join(' · '),
 
       shellOuter: 'width:100%;max-width:1440px;margin:0 auto;background:#FBF6EE',
       shellInner: 'position:relative;background:#FBF6EE',
