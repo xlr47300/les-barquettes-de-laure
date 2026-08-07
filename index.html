@@ -48,7 +48,7 @@
         <div style="max-width:1240px;margin:0 auto;padding:14px 40px;display:flex;align-items:center;gap:28px">
           <button onClick="{{ goHome }}" title="Les Barquettes de Laure — accueil" aria-label="Retour à l'accueil" style="display:flex;align-items:center;justify-content:center;width:148px;height:96px;padding:3px 8px;border:0;background:transparent;cursor:pointer">
             <span style="position:relative;display:block;width:132px;height:90px;overflow:hidden;background:transparent">
-              <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure" style="position:absolute;width:211px;max-width:none;height:auto;left:-41px;top:-24px;mix-blend-mode:multiply">
+              <img src="{{ logoUrl }}" alt="Les Barquettes de Laure" style="position:absolute;width:211px;max-width:none;height:auto;left:-41px;top:-24px;mix-blend-mode:multiply">
             </span>
           </button>
           <nav style="display:flex;gap:2px;margin-left:auto;align-items:center">
@@ -73,7 +73,7 @@
       <header style="position:sticky;top:0;z-index:40;background:rgba(251,246,238,.96);backdrop-filter:blur(10px);border-bottom:1px solid rgba(138,75,42,.12);padding:10px 16px;display:flex;align-items:center;gap:10px">
         <button onClick="{{ goHome }}" title="Les Barquettes de Laure — accueil" aria-label="Retour à l'accueil" style="display:flex;align-items:center;justify-content:center;width:114px;height:76px;padding:3px 6px;border:0;background:transparent;cursor:pointer">
           <span style="position:relative;display:block;width:102px;height:69px;overflow:hidden;background:transparent">
-            <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure" style="position:absolute;width:163px;max-width:none;height:auto;left:-32px;top:-19px;mix-blend-mode:multiply">
+            <img src="{{ logoUrl }}" alt="Les Barquettes de Laure" style="position:absolute;width:163px;max-width:none;height:auto;left:-32px;top:-19px;mix-blend-mode:multiply">
           </span>
         </button>
         <button onClick="{{ openDrawer }}" title="Panier" style="position:relative;margin-left:auto;width:46px;height:46px;border-radius:13px;border:1px solid rgba(138,75,42,.2);background:#FBF6EE;cursor:pointer;display:flex;align-items:center;justify-content:center">
@@ -130,13 +130,12 @@
             <article style="background:#FBF6EE;border:1px solid rgba(138,75,42,.12);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 10px rgba(46,39,35,.05)">
               <button onClick="{{ p.open }}" style="border:0;padding:0;background:none;cursor:pointer;display:block;text-align:left">
                 <div style="{{ p.photoStyle }}">
-                  <div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 12px)"></div>
+                  <div style="{{ p.overlayStyle }}"></div>
                   <div style="position:absolute;left:11px;top:11px;right:11px;display:flex;flex-wrap:wrap;gap:6px">
                     <sc-for list="{{ p.badges }}" as="b" hint-placeholder-count="2">
                       <span style="{{ b.style }}">{{ b.label }}</span>
                     </sc-for>
                   </div>
-                  <span style="position:absolute;left:11px;bottom:11px;font:500 9px/1 'Work Sans';letter-spacing:.15em;text-transform:uppercase;color:#8A4B2A;background:rgba(251,246,238,.82);padding:6px 9px;border-radius:999px">Photo · {{ p.photoLabel }}</span>
                 </div>
               </button>
               <div style="padding:15px 16px 16px;display:flex;flex-direction:column;gap:9px;flex:1">
@@ -178,6 +177,7 @@
         </div>
       </section>
 
+      <sc-if value="{{ hasFormules }}" hint-placeholder-val="{{ false }}">
       <section style="{{ sectionAltStyle }}">
         <div style="{{ innerStyle }}">
           <span style="font:500 11px/1 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:#B79A7E">Formules</span>
@@ -211,6 +211,7 @@
           </div>
         </div>
       </section>
+      </sc-if>
 
       <section style="{{ sectionStyle }}" id="comment">
         <span style="font:500 11px/1 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:#8A9078">En quatre temps</span>
@@ -312,19 +313,6 @@
       </section>
 
       <section style="{{ sectionStyle }}">
-        <h2 style="{{ h2Style }}">Ce qu'en disent les habitués</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:15px;margin-top:20px">
-          <sc-for list="{{ temoignages }}" as="t" hint-placeholder-count="4">
-            <blockquote style="margin:0;background:#FBF6EE;border:1px solid rgba(138,75,42,.12);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:11px">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#C9A88E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6.5C6.5 8 5.5 10 5.5 12.5c0 2 1.2 3.3 2.9 3.3 1.6 0 2.7-1.1 2.7-2.6 0-1.5-1-2.5-2.4-2.5 0-1.3.6-2.4 1.8-3.2Z M18 6.5c-2.5 1.5-3.5 3.5-3.5 6 0 2 1.2 3.3 2.9 3.3 1.6 0 2.7-1.1 2.7-2.6 0-1.5-1-2.5-2.4-2.5 0-1.3.6-2.4 1.8-3.2Z"></path></svg>
-              <p style="margin:0;font:400 15.5px/1.6 'Petrona',serif;color:#3D342E">{{ t.texte }}</p>
-              <span style="font:400 12.5px/1 'Work Sans';color:#8A9078">{{ t.qui }}</span>
-            </blockquote>
-          </sc-for>
-        </div>
-      </section>
-
-      <section style="{{ sectionStyle }}">
         <div style="{{ signupWrap }}">
           <div style="flex:1 1 280px;min-width:240px">
             <h2 style="{{ h2GreenStyle }}">Recevoir le menu de la semaine</h2>
@@ -371,13 +359,12 @@
           <article style="background:#FBF6EE;border:1px solid rgba(138,75,42,.12);border-radius:20px;overflow:hidden;display:flex;flex-direction:column">
             <button onClick="{{ p.open }}" style="border:0;padding:0;background:none;cursor:pointer;display:block;text-align:left">
               <div style="{{ p.photoStyle }}">
-                <div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 12px)"></div>
+                <div style="{{ p.overlayStyle }}"></div>
                 <div style="position:absolute;left:11px;top:11px;right:11px;display:flex;flex-wrap:wrap;gap:6px">
                   <sc-for list="{{ p.badges }}" as="b" hint-placeholder-count="2">
                     <span style="{{ b.style }}">{{ b.label }}</span>
                   </sc-for>
                 </div>
-                <span style="position:absolute;left:11px;bottom:11px;font:500 9px/1 'Work Sans';letter-spacing:.15em;text-transform:uppercase;color:#8A4B2A;background:rgba(251,246,238,.82);padding:6px 9px;border-radius:999px">Photo · {{ p.photoLabel }}</span>
               </div>
             </button>
             <div style="padding:15px 16px 16px;display:flex;flex-direction:column;gap:9px;flex:1">
@@ -412,17 +399,16 @@
       <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
         <div style="flex:1 1 330px;min-width:250px;display:flex;flex-direction:column;gap:10px">
           <div style="{{ ficheHeroStyle }}">
-            <div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 13px)"></div>
+            <div style="{{ ficheOverlayStyle }}"></div>
             <div style="position:absolute;left:13px;top:13px;right:13px;display:flex;flex-wrap:wrap;gap:6px">
               <sc-for list="{{ fiche.badges }}" as="b" hint-placeholder-count="2">
                 <span style="{{ b.style }}">{{ b.label }}</span>
               </sc-for>
             </div>
-            <span style="position:absolute;left:13px;bottom:13px;right:13px;font:400 12px/1.45 'Work Sans';color:#7A5238;background:rgba(251,246,238,.85);padding:9px 12px;border-radius:11px">Photo · {{ fiche.photoBrief }}</span>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
             <sc-for list="{{ fiche.vignettes }}" as="v" hint-placeholder-count="3">
-              <div style="{{ v.style }}"><span style="position:absolute;left:7px;bottom:7px;right:7px;font:500 8.5px/1.3 'Work Sans';letter-spacing:.1em;text-transform:uppercase;color:#8A4B2A;background:rgba(251,246,238,.8);padding:5px 6px;border-radius:7px">{{ v.label }}</span></div>
+              <div style="{{ v.style }}"></div>
             </sc-for>
           </div>
         </div>
@@ -482,17 +468,6 @@
                 <span style="font:300 13.5px/1.6 'Work Sans';color:#3D342E">{{ d.valeur }}</span>
               </div>
             </sc-for>
-            <div style="padding:15px 17px;display:flex;flex-direction:column;gap:10px">
-              <span style="font:500 11px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#A9998C">Valeurs nutritionnelles · pour 100 g</span>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:8px">
-                <sc-for list="{{ fiche.nutrition }}" as="n" hint-placeholder-count="4">
-                  <div style="background:#F4EADC;border-radius:11px;padding:11px;display:flex;flex-direction:column;gap:3px">
-                    <span style="font:600 15px/1 'Petrona',serif;color:#2E2723">{{ n.valeur }}</span>
-                    <span style="font:300 11px/1.2 'Work Sans';color:#6B5D53">{{ n.label }}</span>
-                  </div>
-                </sc-for>
-              </div>
-            </div>
           </div>
 
           <div style="display:flex;gap:11px;align-items:flex-start;background:#F4EADC;border-radius:14px;padding:15px">
@@ -934,7 +909,6 @@ const ICONS = {
 /* ═══════════ DONNÉES FICTIVES — DÉBUT (remplaçables) ═══════════ */
 let PLATS = [
   { id:'parmentier', nom:'Parmentier de canard', desc:"Confit de canard effilé, purée de pommes de terre à la fourchette, gratinée au four.", categorie:'Mijoté du Sud-Ouest', conservation:'Frais', conservations:['Frais','Sous vide','Surgelé'], dispo:'now', reste:4, tint:['#E8CDB4','#D2A97F'],
-    photoLabel:'parmentier', photoBrief:"Barquette ouverte, croûte dorée, une assiette servie à côté, lumière rasante.",
     badges:['Incontournable','Disponible maintenant'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 350 g',prix:9.5},{id:'duo',label:'Format 2 personnes',detail:'≈ 700 g',prix:17},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 1,6 kg',prix:31}],
     descLongue:"Je fais confire les cuisses doucement, je les effile à la main, puis je monte une purée à la fourchette avec un peu de beurre. Gratiné au four juste avant la mise en barquette.",
@@ -942,10 +916,8 @@ let PLATS = [
     allergenes:"Lait. Fabriqué dans une cuisine qui utilise gluten, œuf, fruits à coque.",
     dlc:"À consommer dans les 3 jours pour la version fraîche, 6 mois au congélateur.",
     rechauffage:"Four 180 °C pendant 25 min à couvert, 5 min à découvert pour la croûte. Micro-ondes 4 min à 700 W.",
-    poids:"350 g par portion individuelle",
-    nutrition:[{valeur:'168 kcal',label:'Énergie'},{valeur:'9,2 g',label:'Lipides'},{valeur:'13 g',label:'Glucides'},{valeur:'8,1 g',label:'Protéines'}] },
+    poids:"350 g par portion individuelle" },
   { id:'lasagnes', nom:'Lasagnes maison', desc:"Bœuf mijoté trois heures, béchamel maison, pâtes fraîches roulées le matin.", categorie:'Grand classique', conservation:'Frais', conservations:['Frais','Surgelé'], dispo:'low', reste:2, tint:['#EFCFC0','#D89A82'],
-    photoLabel:'lasagnes', photoBrief:"Barquette familiale, part découpée fumante sur assiette, étiquette visible.",
     badges:['Presque épuisé','Disponible maintenant'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 320 g',prix:8.5},{id:'duo',label:'Format 2 personnes',detail:'≈ 650 g',prix:15},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 1,5 kg',prix:27}],
     descLongue:"Une sauce longue, beaucoup de patience et rien d'autre. Je monte sept couches, jamais plus, pour que ça tienne à la découpe.",
@@ -953,10 +925,8 @@ let PLATS = [
     allergenes:"Gluten, œuf, lait.",
     dlc:"3 jours au réfrigérateur, 4 mois au congélateur.",
     rechauffage:"Four 170 °C, 30 min à couvert. Ne pas décongeler au micro-ondes, la béchamel tranche.",
-    poids:"320 g par portion individuelle",
-    nutrition:[{valeur:'152 kcal',label:'Énergie'},{valeur:'7,4 g',label:'Lipides'},{valeur:'14 g',label:'Glucides'},{valeur:'9,6 g',label:'Protéines'}] },
+    poids:"320 g par portion individuelle" },
   { id:'blanquette', nom:'Blanquette de veau', desc:"Veau fondant, champignons de Paris, sauce crémée au citron. Riz inclus.", categorie:'Mijoté de famille', conservation:'Sous vide', conservations:['Sous vide','Frais','Surgelé'], dispo:'now', reste:6, tint:['#EFE0C8','#D8C49A'],
-    photoLabel:'blanquette', photoBrief:"Sachet sous vide étiqueté et assiette servie, sauce nappante, persil frais.",
     badges:['Disponible maintenant'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 380 g',prix:10},{id:'duo',label:'Format 2 personnes',detail:'≈ 750 g',prix:18},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 1,7 kg',prix:34}],
     descLongue:"Épaule de veau cuite doucement au bouillon, liaison à la crème et au jaune d'œuf, une pointe de citron pour réveiller. Le riz est conditionné à part.",
@@ -964,10 +934,8 @@ let PLATS = [
     allergenes:"Lait, œuf, gluten (liaison), céleri.",
     dlc:"Sous vide : 8 jours au réfrigérateur. 5 mois au congélateur.",
     rechauffage:"Sachet au bain-marie 15 min sans ébullition, ou casserole à feu doux. Éviter le micro-ondes.",
-    poids:"380 g par portion individuelle",
-    nutrition:[{valeur:'134 kcal',label:'Énergie'},{valeur:'6,8 g',label:'Lipides'},{valeur:'7,9 g',label:'Glucides'},{valeur:'10,4 g',label:'Protéines'}] },
+    poids:"380 g par portion individuelle" },
   { id:'couscous', nom:'Couscous maison', desc:"Bouillon de légumes parfumé, agneau et merguez, semoule roulée à la main.", categorie:'Méditerranéen', conservation:'Surgelé', conservations:['Surgelé','Frais'], dispo:'now', reste:8, tint:['#F0DBB8','#DDB472'],
-    photoLabel:'couscous', photoBrief:"Trois barquettes empilées (semoule, bouillon, viandes) + assiette dressée.",
     badges:['À congeler','Disponible maintenant'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 420 g',prix:9.5},{id:'duo',label:'Format 2 personnes',detail:'≈ 800 g',prix:17.5},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 1,9 kg',prix:32}],
     descLongue:"Le bouillon mijote avec sept légumes, la semoule est roulée et vapeur trois fois. Je conditionne séparément pour que rien ne se détrempe.",
@@ -975,10 +943,8 @@ let PLATS = [
     allergenes:"Gluten. Peut contenir des traces de céleri.",
     dlc:"Surgelé : 6 mois. Ne pas recongeler après décongélation.",
     rechauffage:"Décongeler 12 h au réfrigérateur. Bouillon à la casserole, semoule 3 min au micro-ondes avec un filet d'eau.",
-    poids:"420 g par portion individuelle",
-    nutrition:[{valeur:'128 kcal',label:'Énergie'},{valeur:'4,6 g',label:'Lipides'},{valeur:'16 g',label:'Glucides'},{valeur:'7,2 g',label:'Protéines'}] },
+    poids:"420 g par portion individuelle" },
   { id:'gratin', nom:'Gratin de légumes', desc:"Courgette, aubergine, tomate, chèvre frais et thym. Sans viande.", categorie:'Végétarien', conservation:'Frais', conservations:['Frais','Surgelé'], dispo:'low', reste:3, tint:['#E4E7D4','#B9C3A0'],
-    photoLabel:'gratin de légumes', photoBrief:"Barquette vue de dessus, rangs de légumes réguliers, chèvre doré.",
     badges:['Presque épuisé','Disponible maintenant'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 330 g',prix:7.5},{id:'duo',label:'Format 2 personnes',detail:'≈ 640 g',prix:14},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 1,5 kg',prix:24}],
     descLongue:"Les légumes sont tranchés fin, salés puis rangés debout pour qu'ils confisent sans rendre d'eau. Chèvre frais du Lot-et-Garonne et thym du jardin.",
@@ -986,10 +952,8 @@ let PLATS = [
     allergenes:"Lait.",
     dlc:"3 jours au réfrigérateur. 4 mois au congélateur.",
     rechauffage:"Four 180 °C, 20 min. Micro-ondes 3 min, puis 2 min de repos.",
-    poids:"330 g par portion individuelle",
-    nutrition:[{valeur:'96 kcal',label:'Énergie'},{valeur:'6,1 g',label:'Lipides'},{valeur:'5,2 g',label:'Glucides'},{valeur:'4,3 g',label:'Protéines'}] },
+    poids:"330 g par portion individuelle" },
   { id:'tiramisu', nom:'Tiramisu', desc:"Mascarpone monté à la main, café de la brûlerie, cacao amer au dernier moment.", categorie:'Douceur', conservation:'Frais', conservations:['Frais'], dispo:'now', reste:5, tint:['#E9DDCF','#C9B49C'],
-    photoLabel:'tiramisu', photoBrief:"Petite barquette individuelle avec couvercle, cacao tamisé, cuillère.",
     badges:['Disponible maintenant'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 140 g',prix:4.5},{id:'duo',label:'Format 2 personnes',detail:'≈ 280 g',prix:8},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 800 g',prix:16}],
     descLongue:"Je monte les blancs séparément, je n'ajoute presque pas de sucre et je poudre le cacao juste avant que vous passiez.",
@@ -997,10 +961,8 @@ let PLATS = [
     allergenes:"Lait, œuf, gluten. Contient de l'alcool et des œufs crus.",
     dlc:"2 jours au réfrigérateur. Ne se congèle pas.",
     rechauffage:"Servir bien frais, sortir 10 min avant.",
-    poids:"140 g par portion individuelle",
-    nutrition:[{valeur:'238 kcal',label:'Énergie'},{valeur:'16 g',label:'Lipides'},{valeur:'19 g',label:'Glucides'},{valeur:'5,1 g',label:'Protéines'}] },
+    poids:"140 g par portion individuelle" },
   { id:'poulet', nom:'Poulet basquaise', desc:"Poulet fermier, poivrons confits, piment doux. Cuisiné pour vendredi.", categorie:'Mijoté du Sud-Ouest', conservation:'Frais', conservations:['Frais','Sous vide','Surgelé'], dispo:'preco', reste:10, retrait:'vendredi 14 août', limite:'mercredi 12 août, 18h', tint:['#F1CFBB','#DE9B70'],
-    photoLabel:'poulet basquaise', photoBrief:"Barquette 2 personnes, sauce généreuse, riz à part, assiette servie.",
     badges:['Pour vendredi'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 360 g',prix:9},{id:'duo',label:'Format 2 personnes',detail:'≈ 700 g',prix:16.5},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 1,6 kg',prix:29}],
     descLongue:"Poulet fermier du Lot-et-Garonne, poivrons confits une heure à l'huile d'olive, un peu de piment doux. Je le cuisine le vendredi matin pour le retrait du soir.",
@@ -1008,10 +970,8 @@ let PLATS = [
     allergenes:"Sulfites (vin blanc).",
     dlc:"3 jours au réfrigérateur. 5 mois au congélateur.",
     rechauffage:"Casserole à feu doux 12 min à couvert. Four 170 °C, 20 min.",
-    poids:"360 g par portion individuelle",
-    nutrition:[{valeur:'118 kcal',label:'Énergie'},{valeur:'5,4 g',label:'Lipides'},{valeur:'4,8 g',label:'Glucides'},{valeur:'12,2 g',label:'Protéines'}] },
+    poids:"360 g par portion individuelle" },
   { id:'daube', nom:'Daube de bœuf aux olives', desc:"Bœuf mariné au vin, zeste d'orange, olives noires. Précommande.", categorie:'Méditerranéen', conservation:'Sous vide', conservations:['Sous vide','Surgelé'], dispo:'preco', reste:8, retrait:'samedi 15 août', limite:'jeudi 13 août, 18h', tint:['#E0CFC2','#B69684'],
-    photoLabel:'daube', photoBrief:"Sachet sous vide étiqueté, cassolette servie, zeste d'orange visible.",
     badges:['Pour samedi','À congeler'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 370 g',prix:10},{id:'duo',label:'Format 2 personnes',detail:'≈ 720 g',prix:18},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 1,7 kg',prix:33}],
     descLongue:"Une nuit de marinade, quatre heures de cuisson très douce. C'est le plat que je conseille de mettre au congélateur : il gagne à être réchauffé.",
@@ -1019,10 +979,8 @@ let PLATS = [
     allergenes:"Sulfites.",
     dlc:"Sous vide : 8 jours au réfrigérateur. 6 mois au congélateur.",
     rechauffage:"Bain-marie 15 min, ou casserole à feu très doux.",
-    poids:"370 g par portion individuelle",
-    nutrition:[{valeur:'142 kcal',label:'Énergie'},{valeur:'7,2 g',label:'Lipides'},{valeur:'3,4 g',label:'Glucides'},{valeur:'14,8 g',label:'Protéines'}] },
+    poids:"370 g par portion individuelle" },
   { id:'soupe', nom:'Velouté de potimarron', desc:"Potimarron rôti, lait de coco, huile de noisette. Sans produit animal.", categorie:'Végétarien', conservation:'Surgelé', conservations:['Surgelé','Frais'], dispo:'preco', reste:12, retrait:'mercredi 19 août', limite:'lundi 17 août, 18h', tint:['#F2DDC0','#E0AE70'],
-    photoLabel:'velouté', photoBrief:"Barquette fermée avec étiquette + bol servi, filet d'huile en surface.",
     badges:['Pour mercredi','À congeler'],
     variants:[{id:'indiv',label:'Portion individuelle',detail:'≈ 400 ml',prix:7.5},{id:'duo',label:'Format 2 personnes',detail:'≈ 800 ml',prix:14},{id:'fam',label:'Format familial 4–6 pers.',detail:'≈ 2 l',prix:26}],
     descLongue:"Je rôtis le potimarron avant de le mixer, ça change tout. Lait de coco pour la douceur, huile de noisette au moment de servir.",
@@ -1030,20 +988,10 @@ let PLATS = [
     allergenes:"Fruits à coque (noisette).",
     dlc:"Surgelé : 8 mois.",
     rechauffage:"Casserole à feu doux 10 min en remuant.",
-    poids:"400 ml par portion individuelle",
-    nutrition:[{valeur:'64 kcal',label:'Énergie'},{valeur:'3,8 g',label:'Lipides'},{valeur:'6,1 g',label:'Glucides'},{valeur:'1,4 g',label:'Protéines'}] }
+    poids:"400 ml par portion individuelle" }
 ];
 
-let FORMULES = [
-  { id:'semaine', tag:'5 repas', nom:'La semaine tranquille', contenu:'5 portions individuelles, variées, prêtes pour les soirs de semaine.', prix:42, prixDetail:'soit 8,40 € le repas', populaire:true,
-    points:["Je compose selon ce que j'ai cuisiné",'Deux plats à congeler si vous préférez','Un dessert offert dès la troisième commande'] },
-  { id:'duo', tag:'3 plats · 2 pers.', nom:'Le duo', contenu:'3 plats en format deux personnes, pour six repas à partager.', prix:45, prixDetail:'soit 7,50 € la part',
-    points:['Idéal pour deux, sans reste inutile','Un mijoté, un gratin, une douceur','Sous vide sur demande'] },
-  { id:'congelo', tag:'6 portions', nom:'Le congélateur de secours', contenu:'6 portions surgelées à empiler pour les jours sans temps.', prix:48, prixDetail:'soit 8,00 € la portion',
-    points:['Tout se garde 5 à 6 mois','Étiquettes avec date et réchauffage','Sacs isothermes prêtés au retrait'] },
-  { id:'etudiant', tag:'8 portions', nom:'Le panier étudiant', contenu:'8 portions simples et nourrissantes, prix serré.', prix:60, prixDetail:'soit 7,50 € la portion',
-    points:['Plats faciles à réchauffer au micro-ondes','Petites barquettes qui tiennent dans un mini-frigo','Sur présentation de la carte étudiante'] }
-];
+let FORMULES = [];
 
 let MOMENTS = [
   { icon:'assiette', titre:'Pour ce soir', texte:"Ce qui est prêt aujourd'hui, à réchauffer en dix minutes.", lien:'Voir le frais', filtre:{ conservation:'Frais' } },
@@ -1067,13 +1015,6 @@ let ENGAGEMENTS = [
   { icon:'epingle', titre:'Retrait local', texte:'Autour de Villeneuve-sur-Lot : Pujols, Bias, Sainte-Livrade.' }
 ];
 
-let TEMOIGNAGES = [
-  { texte:"Je prends la formule semaine depuis trois mois. Ça ressemble à ce que je cuisinerais si j'avais le temps.", qui:'Hélène, Pujols' },
-  { texte:"Les barquettes vont directement au congélateur, avec la date écrite dessus. C'est bête, mais ça change la vie.", qui:'Marc, Villeneuve-sur-Lot' },
-  { texte:"La blanquette de Laure, c'est celle de ma grand-mère. Je ne pensais pas la retrouver.", qui:'Sophie, Bias' },
-  { texte:"On récupère le vendredi en rentrant du travail, les enfants mangent à 19h30. Simple.", qui:'Julien, Sainte-Livrade' }
-];
-
 let JOURS = [
   { id:'mer', jour:'Mercredi', date:'12 août', plage:'17h – 19h', creneaux:[{ id:'m1', label:'17h00', restant:3 },{ id:'m2', label:'17h30', restant:2 },{ id:'m3', label:'18h00', restant:4 },{ id:'m4', label:'18h30', restant:1 }] },
   { id:'ven', jour:'Vendredi', date:'14 août', plage:'17h – 19h', creneaux:[{ id:'v1', label:'17h00', restant:4 },{ id:'v2', label:'17h30', restant:0 },{ id:'v3', label:'18h00', restant:3 },{ id:'v4', label:'18h30', restant:3 }] },
@@ -1090,6 +1031,7 @@ const BADGE_STYLES = {
   'Pour mercredi': 'background:#F4EADC;color:#8A4B2A',
   'Presque épuisé': 'background:#FBE3DA;color:#B24A26',
   'À congeler': 'background:#E6EAEC;color:#4E5C63',
+  'Surgelé': 'background:#E6EAEC;color:#4E5C63',
   'Incontournable': 'background:#8A4B2A;color:#FBF6EE'
 };
 const CONS_ICON = { 'Frais':'assiette', 'Sous vide':'sousvide', 'Surgelé':'flocon' };
@@ -1126,7 +1068,6 @@ class Component extends DCLogic {
       MOMENTS = data.moments;
       ETAPES = data.etapes;
       ENGAGEMENTS = data.engagements;
-      TEMOIGNAGES = data.temoignages;
       JOURS = data.jours;
       this._sheetSettings = data.settings;
       this._sheetTextes = data.textes;
@@ -1167,7 +1108,7 @@ class Component extends DCLogic {
       'accueil.precommandes.texte': 'Ces plats sont cuisinés à la demande. Réservez avant la date limite, je les prépare pour le jour du retrait.',
       'accueil.laure.titre': 'Une cuisine de maison, simplement.',
       'accueil.laure.texte': "J'ai longtemps cuisiné pour les autres sans jamais compter. Aujourd'hui je prépare chaque semaine quelques plats mijotés dans ma cuisine, près de Villeneuve-sur-Lot : ce que j'aime faire, avec les légumes du marché et des recettes de famille.",
-      'accueil.temoignages.titre': 'Ce sont eux qui en parlent le mieux',
+      'accueil.hero.cta2': 'Comment ça marche',
       'accueil.newsletter.titre': 'Recevoir le menu de la semaine',
       'accueil.newsletter.texte': "Chaque lundi, je vous envoie la liste des plats et les créneaux de retrait. Un message par semaine, rien d'autre.",
       'plats.titre': 'Les plats de Laure',
@@ -1201,7 +1142,12 @@ class Component extends DCLogic {
   euro(n) { return n.toFixed(2).replace('.', ',') + ' €'; }
   icon(name) { return ICONS[name] || ICONS.barquette; }
 
-  nav(route) { this.setState({ route, drawerOpen:false, sheetId:null }); const sc = this._sc; if (sc) sc.scrollTop = 0; }
+  nav(route) {
+    this.setState({ route, drawerOpen:false, sheetId:null });
+    const sc = this._sc;
+    if (sc) sc.scrollTop = 0;
+    if (typeof window !== 'undefined') window.scrollTo(0, 0);
+  }
 
   flash(msg) {
     this.setState({ toast: msg });
@@ -1209,14 +1155,29 @@ class Component extends DCLogic {
     this._t = setTimeout(() => this.setState({ toast:'' }), 2400);
   }
 
+  variantStock(p, v) { return v.stock == null ? p.reste : v.stock; }
+
+  availableFor(platId, variantId) {
+    const p = PLATS.find(x => x.id === platId);
+    const v = p && (p.variants.find(x => x.id === variantId) || p.variants[0]);
+    if (!p || !v) return 0;
+    const reserved = this.state.cart.filter(l => l.platId === platId && l.variantId === v.id).reduce((sum, line) => sum + line.qty, 0);
+    return Math.max(0, this.variantStock(p, v) - reserved);
+  }
+
   addToCart(platId, variantId, conservation, qty) {
+    const p = PLATS.find(x => x.id === platId);
+    const v = p && (p.variants.find(x => x.id === variantId) || p.variants[0]);
+    const available = v ? this.availableFor(platId, v.id) : 0;
+    if (!p || !v || available <= 0) { this.flash('Ce format est épuisé'); return; }
     const cart = this.state.cart.slice();
     const i = cart.findIndex(l => l.platId === platId && l.variantId === variantId && l.conservation === conservation);
-    if (i >= 0) cart[i] = { ...cart[i], qty: cart[i].qty + qty };
-    else cart.push({ platId, variantId, conservation, qty });
-    const p = PLATS.find(x => x.id === platId);
+    const current = i >= 0 ? cart[i].qty : 0;
+    const next = current + Math.min(available, qty);
+    if (i >= 0) cart[i] = { ...cart[i], qty:next };
+    else cart.push({ platId, variantId, conservation, qty:next });
     this.setState({ cart, sheetId:null });
-    this.flash((p ? p.nom : 'Plat') + (qty > 1 ? ' ×' + qty : '') + ' ajouté au panier');
+    this.flash(p.nom + (next - current > 1 ? ' ×' + (next - current) : '') + ' ajouté au panier');
   }
 
   addFormule(f) {
@@ -1230,27 +1191,35 @@ class Component extends DCLogic {
 
   changeQty(idx, delta) {
     const cart = this.state.cart.slice();
-    const q = cart[idx].qty + delta;
+    const available = this.availableFor(cart[idx].platId, cart[idx].variantId);
+    const q = cart[idx].qty + (delta > 0 ? Math.min(delta, available) : delta);
+    if (delta > 0 && available <= 0) { this.flash('Stock maximum atteint pour ce format'); return; }
     if (q <= 0) cart.splice(idx, 1); else cart[idx] = { ...cart[idx], qty:q };
     this.setState({ cart });
   }
 
   openSheet(id) {
     const p = PLATS.find(x => x.id === id);
-    this.setState({ sheetId:id, sheetVariant:p.variants[0].id, sheetConservation:p.conservations[0], sheetQty:1 });
+    const variant = p && (p.variants.find(v => this.availableFor(p.id, v.id) > 0) || p.variants[0]);
+    if (!p || !variant || this.availableFor(p.id, variant.id) <= 0) { this.flash('Ce plat est épuisé'); return; }
+    this.setState({ sheetId:id, sheetVariant:variant.id, sheetConservation:p.conservations[0], sheetQty:1 });
   }
 
   lineInfo(l) {
     if (l.variantId === 'formule') {
       const f = FORMULES.find(x => 'formule-' + x.id === l.platId);
-      return { nom:f.nom, variantLabel:f.tag, conservation:'Composée par Laure', prix:f.prix, tint:['#E7DCCB','#C9B49C'], dispo:'now', reste:9 };
+      return { nom:f.nom, variantLabel:f.tag, conservation:'Composée par Laure', prix:f.prix, tint:['#E7DCCB','#C9B49C'], photo:'', dispo:'now', reste:9 };
     }
     const p = PLATS.find(x => x.id === l.platId);
     const v = p.variants.find(x => x.id === l.variantId) || p.variants[0];
-    return { nom:p.nom, variantLabel:v.label, conservation:l.conservation || p.conservation, prix:v.prix, tint:p.tint, dispo:p.dispo, reste:p.reste, retrait:p.retrait };
+    return { nom:p.nom, variantLabel:v.label, conservation:l.conservation || p.conservation, prix:v.prix, tint:p.tint, photo:(p.photos || [])[0] || '', dispo:p.dispo, reste:v.stock == null ? p.reste : v.stock, retrait:p.retrait };
   }
 
-  photoBox(tint, h) { return 'position:relative;overflow:hidden;height:' + h + ';background:linear-gradient(145deg,' + tint[0] + ',' + tint[1] + ')'; }
+  photoBox(tint, h, url) {
+    const safeUrl = String(url || '').replace(/["\\]/g, '');
+    const background = safeUrl ? 'url("' + safeUrl + '") center/cover no-repeat' : 'linear-gradient(145deg,' + tint[0] + ',' + tint[1] + ')';
+    return 'position:relative;overflow:hidden;height:' + h + ';background:' + background;
+  }
 
   badgeList(names) {
     return names.map(n => ({ label:n, style:"font:500 10px/1 'Work Sans';letter-spacing:.06em;padding:6px 9px;border-radius:999px;white-space:nowrap;" + (BADGE_STYLES[n] || 'background:#F2E7D9;color:#8A4B2A') }));
@@ -1267,18 +1236,21 @@ class Component extends DCLogic {
 
   variantRows(p, selected, onSelect) {
     return p.variants.map(v => {
-      const on = v.id === selected;
-      return { label:v.label, detail:v.detail, prix:this.euro(v.prix),
-        style:'display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:62px;padding:14px 17px;border-radius:15px;cursor:pointer;text-align:left;border:1.5px solid ' + (on ? '#C9613F' : 'rgba(138,75,42,.18)') + ';background:' + (on ? '#FBEFE6' : '#FBF6EE') + ';color:#2E2723',
-        select:() => onSelect(v.id) };
+      const available = this.availableFor(p.id, v.id);
+      const disabled = available <= 0;
+      const on = v.id === selected && !disabled;
+      return { label:v.label, detail:v.detail + ' · ' + (disabled ? 'épuisé' : available + ' disponible' + (available > 1 ? 's' : '')), prix:this.euro(v.prix),
+        style:'display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:62px;padding:14px 17px;border-radius:15px;cursor:' + (disabled ? 'not-allowed' : 'pointer') + ';opacity:' + (disabled ? '.5' : '1') + ';text-align:left;border:1.5px solid ' + (on ? '#C9613F' : 'rgba(138,75,42,.18)') + ';background:' + (on ? '#FBEFE6' : '#FBF6EE') + ';color:#2E2723',
+        select:() => { if (!disabled) onSelect(v.id); } };
     });
   }
 
   mapPlat(p) {
     const stock = this._sheetSettings?.['commande.afficher_stock'] ? this._sheetSettings['commande.afficher_stock'] === 'Oui' : this.props.afficherStock !== false;
-    const v0 = p.variants[0];
+    const v0 = p.variants.find(v => (v.stock == null ? p.reste : v.stock) > 0) || p.variants[0];
     const dispoLabel = p.dispo === 'preco'
       ? ('Sur réservation · retrait ' + p.retrait)
+      : p.dispo === 'soldout' ? 'Épuisé pour le moment'
       : stock ? (p.reste + (p.reste > 1 ? ' barquettes restantes' : ' barquette restante'))
       : (p.dispo === 'low' ? 'Presque épuisé' : "Disponible aujourd'hui");
     return {
@@ -1288,12 +1260,13 @@ class Component extends DCLogic {
       prixLabel: 'dès ' + this.euro(v0.prix),
       dispoLabel,
       dispoStyle: "font:400 11.5px/1.4 'Work Sans';color:" + (p.dispo === 'low' ? '#B24A26' : p.dispo === 'preco' ? '#8A4B2A' : '#4E6141'),
-      ctaLabel: p.dispo === 'preco' ? 'Réserver' : 'Ajouter',
-      photoStyle: this.photoBox(p.tint, '180px'),
+      ctaLabel: p.dispo === 'soldout' ? 'Épuisé' : p.dispo === 'preco' ? 'Réserver' : 'Ajouter',
+      photoStyle: this.photoBox(p.tint, '180px', (p.photos || [])[0]),
+      overlayStyle: (p.photos || []).length ? 'display:none' : 'position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 12px)',
       badges: this.badgeList(p.badges),
-      thumbStyle: this.photoBox(p.tint, '88px') + ';width:88px;flex:none;border-radius:12px',
-      open: () => { this.setState({ productId:p.id, ficheVariant:'indiv', ficheConservation:p.conservations[0], ficheQty:1 }); this.nav('fiche'); },
-      add: () => (p.variants.length > 1 || p.conservations.length > 1)
+      thumbStyle: this.photoBox(p.tint, '88px', (p.photos || [])[0]) + ';width:88px;flex:none;border-radius:12px',
+      open: () => { this.setState({ productId:p.id, ficheVariant:v0.id, ficheConservation:p.conservations[0], ficheQty:1 }); this.nav('fiche'); },
+      add: () => p.dispo === 'soldout' ? this.flash('Ce plat est épuisé') : (p.variants.length > 1 || p.conservations.length > 1)
         ? this.openSheet(p.id)
         : this.addToCart(p.id, v0.id, p.conservations[0], 1)
     };
@@ -1305,6 +1278,7 @@ class Component extends DCLogic {
     const delai = this._sheetSettings?.['commande.delai_reponse'] || this.props.dureeReponse || 'dans les deux heures';
     const contactPhone = this._sheetSettings?.['contact.telephone'] || '06 12 34 56 78';
     const contactEmail = this._sheetSettings?.['contact.email'] || 'bonjour@barquettesdelaure.fr';
+    const logoUrl = this._sheetSettings?.['asset.logo'] || 'uploads/Logo%20les%20barquettes%20de%20Laure.png';
     const isMobile = s.vw < 900;
 
     const plats = PLATS.map(p => this.mapPlat(p));
@@ -1313,12 +1287,12 @@ class Component extends DCLogic {
 
     const cartLines = s.cart.map((l, idx) => {
       const info = this.lineInfo(l);
-      const note = info.dispo === 'preco' ? ('Précommande · retrait ' + info.retrait) : (stock && info.reste <= 3 ? ("Il ne m'en reste que " + info.reste) : 'Prêt et réservé pour vous');
+      const note = info.dispo === 'preco' ? ('Précommande · retrait ' + info.retrait) : (stock && info.dispo === 'low' ? ("Il ne m'en reste que " + info.reste + ' dans ce format') : 'Prêt et réservé pour vous');
       return {
         ...info, qty:l.qty, total:this.euro(info.prix * l.qty), note,
-        noteStyle:"font:400 12px/1.4 'Work Sans';color:" + (info.dispo === 'preco' ? '#8A4B2A' : info.reste <= 3 ? '#B24A26' : '#8A9078'),
-        thumbStyle:this.photoBox(info.tint, '86px') + ';width:86px;flex:none;border-radius:12px',
-        thumbSmallStyle:this.photoBox(info.tint, '56px') + ';width:56px;flex:none;border-radius:10px',
+        noteStyle:"font:400 12px/1.4 'Work Sans';color:" + (info.dispo === 'preco' ? '#8A4B2A' : info.dispo === 'low' ? '#B24A26' : '#8A9078'),
+        thumbStyle:this.photoBox(info.tint, '86px', info.photo) + ';width:86px;flex:none;border-radius:12px',
+        thumbSmallStyle:this.photoBox(info.tint, '56px', info.photo) + ';width:56px;flex:none;border-radius:10px',
         inc:() => this.changeQty(idx, 1), dec:() => this.changeQty(idx, -1), remove:() => this.changeQty(idx, -l.qty)
       };
     });
@@ -1340,22 +1314,22 @@ class Component extends DCLogic {
 
     // fiche
     const p = PLATS.find(x => x.id === s.productId) || PLATS[0];
-    const variant = p.variants.find(v => v.id === s.ficheVariant) || p.variants[0];
+    const variant = p.variants.find(v => v.id === s.ficheVariant && this.availableFor(p.id, v.id) > 0) || p.variants.find(v => this.availableFor(p.id, v.id) > 0) || p.variants[0];
     const ficheCons = s.ficheConservation && p.conservations.indexOf(s.ficheConservation) >= 0 ? s.ficheConservation : p.conservations[0];
 
     // sélecteur
     const sp = PLATS.find(x => x.id === s.sheetId);
-    const spVariant = sp ? (sp.variants.find(v => v.id === s.sheetVariant) || sp.variants[0]) : null;
+    const spVariant = sp ? (sp.variants.find(v => v.id === s.sheetVariant && this.availableFor(sp.id, v.id) > 0) || sp.variants.find(v => this.availableFor(sp.id, v.id) > 0) || sp.variants[0]) : null;
     const spCons = sp ? (s.sheetConservation && sp.conservations.indexOf(s.sheetConservation) >= 0 ? s.sheetConservation : sp.conservations[0]) : null;
     const sheet = sp ? {
       nom:sp.nom, categorie:sp.categorie,
-      thumbStyle:this.photoBox(sp.tint, '78px') + ';width:78px;flex:none;border-radius:14px',
+      thumbStyle:this.photoBox(sp.tint, '78px', (sp.photos || [])[0]) + ';width:78px;flex:none;border-radius:14px',
       dispoLabel: sp.dispo === 'preco' ? ('Sur réservation · retrait ' + sp.retrait) : stock ? (sp.reste + ' barquettes disponibles') : "Disponible aujourd'hui",
       dispoStyle: "font:400 12.5px/1.4 'Work Sans';color:" + (sp.dispo === 'low' ? '#B24A26' : sp.dispo === 'preco' ? '#8A4B2A' : '#4E6141'),
-      variants: this.variantRows(sp, spVariant.id, (id) => this.setState({ sheetVariant:id })),
+      variants: this.variantRows(sp, spVariant.id, (id) => this.setState({ sheetVariant:id, sheetQty:1 })),
       conservations: this.consChips(sp.conservations, spCons, (c) => this.setState({ sheetConservation:c })),
       conservationNote: CONS_NOTE[spCons] || '',
-      stockNote: sp.dispo === 'preco' ? 'Réserver avant ' + sp.limite : stock ? ('Maximum ' + sp.reste + ' pour ce plat') : 'Quantités limitées',
+      stockNote: sp.dispo === 'preco' ? 'Réserver avant ' + sp.limite : stock ? (this.availableFor(sp.id, spVariant.id) + ' disponible' + (this.availableFor(sp.id, spVariant.id) > 1 ? 's' : '') + ' dans ce format') : 'Quantités limitées',
       ctaLabel: (sp.dispo === 'preco' ? 'Réserver · ' : 'Ajouter au panier · ') + this.euro(spVariant.prix * s.sheetQty),
       detail: () => { this.setState({ productId:sp.id, ficheVariant:spVariant.id, ficheConservation:spCons, ficheQty:s.sheetQty }); this.nav('fiche'); }
     } : { nom:'', categorie:'', variants:[], conservations:[], thumbStyle:'', dispoStyle:'', ctaLabel:'', stockNote:'', conservationNote:'', dispoLabel:'', detail:() => {} };
@@ -1402,7 +1376,7 @@ class Component extends DCLogic {
     const showCartBar = isMobile && count > 0 && ['home', 'plats', 'fiche'].indexOf(s.route) >= 0;
 
     return {
-      isMobile, isDesktop: !isMobile, showStatusBar: false, delai,
+      isMobile, isDesktop: !isMobile, showStatusBar: false, delai, logoUrl,
       contactPhone, contactEmail,
       footerSchedule: JOURS.map(j => j.jour + ' ' + j.plage).join(' · '),
 
@@ -1453,45 +1427,41 @@ class Component extends DCLogic {
 
       moments: MOMENTS.map(m => ({ titre:m.titre, texte:m.texte, lien:m.lien, iconPath:this.icon(m.icon),
         go:() => { this.setState({ filters:{ conservation:m.filtre.conservation || 'Tous', format:m.filtre.format || 'Tous', dispo:'Tous' } }); this.nav('plats'); } })),
+      hasFormules: FORMULES.length > 0,
       formules: FORMULES.map(x => ({ ...x, prix:this.euro(x.prix), add:() => this.addFormule(x) })),
       etapes: ETAPES.map(e => ({ ...e, iconPath:this.icon(e.icon), texte: e.n === '3' ? "Je vérifie ce qu'il me reste et je vous confirme par SMS, en général " + delai + '.' : e.texte })),
       engagements: ENGAGEMENTS.map(g => ({ ...g, iconPath:this.icon(g.icon) })),
-      temoignages: TEMOIGNAGES,
       joursSemaineEntetes: ['L', 'M', 'M', 'J', 'V', 'S', 'D'], calendrier,
 
       fiche: {
-        nom:p.nom, categorie:p.categorie, descLongue:p.descLongue, photoBrief:p.photoBrief,
+        nom:p.nom, categorie:p.categorie, descLongue:p.descLongue,
         badges:this.badgeList(p.badges),
-        variants:this.variantRows(p, variant.id, (id) => this.setState({ ficheVariant:id })),
+        variants:this.variantRows(p, variant.id, (id) => this.setState({ ficheVariant:id, ficheQty:1 })),
         conservations:this.consChips(p.conservations, ficheCons, (c) => this.setState({ ficheConservation:c })),
         conservationNote: CONS_NOTE[ficheCons] || '',
-        vignettes:[
-          { label:'Barquette + étiquette', style:this.photoBox(p.tint, '76px') + ';border-radius:12px' },
-          { label:'Assiette servie', style:this.photoBox([p.tint[1], p.tint[0]], '76px') + ';border-radius:12px' },
-          { label:'Détail texture', style:this.photoBox(p.tint, '76px') + ';border-radius:12px' }
-        ],
-        dispoTitre: p.dispo === 'preco' ? ('Sur réservation · retrait ' + p.retrait) : stock ? (p.reste + ' barquettes disponibles') : "Disponible aujourd'hui",
-        dispoTexte: p.dispo === 'preco' ? ('Je le cuisine à la demande. Réservez avant ' + p.limite + '.') : 'Déjà cuisiné, réservé dès votre confirmation. Retrait sous 3 jours.',
+        vignettes:(p.photos || []).map((photo) => ({ label:'', style:this.photoBox(p.tint, '76px', photo) + ';border-radius:12px' })),
+        dispoTitre: p.dispo === 'preco' ? ('Sur réservation · retrait ' + p.retrait) : p.dispo === 'soldout' ? 'Épuisé pour le moment' : stock ? (p.reste + ' barquettes disponibles') : "Disponible aujourd'hui",
+        dispoTexte: p.dispo === 'preco' ? ('Je le cuisine à la demande. Réservez avant ' + p.limite + '.') : p.dispo === 'soldout' ? 'Revenez bientôt : le stock sera mis à jour dans le menu.' : 'Déjà cuisiné, réservé dès votre confirmation. Retrait sous 3 jours.',
         dispoBoxStyle: 'display:flex;flex-direction:column;gap:5px;padding:15px 17px;border-radius:15px;background:' + (p.dispo === 'preco' ? '#F4EADC' : p.dispo === 'low' ? '#FBE3DA' : '#EAEFE2') + ';color:' + (p.dispo === 'preco' ? '#7A5238' : p.dispo === 'low' ? '#A6421F' : '#4E6141'),
         details:[
           { label:'Ingrédients', valeur:p.ingredients },
           { label:'Allergènes', valeur:p.allergenes },
           { label:'Conservation et date limite', valeur:p.dlc },
           { label:'Réchauffage', valeur:p.rechauffage },
-          { label:'Poids net', valeur:p.poids + ' · barquette scellée, étiquetée à la main' }
-        ],
-        nutrition:p.nutrition
+          { label:'Formats et poids', valeur:p.poids }
+        ]
       },
-      ficheHeroStyle: this.photoBox(p.tint, isMobile ? '250px' : '380px') + ';border-radius:22px',
+      ficheHeroStyle: this.photoBox(p.tint, isMobile ? '250px' : '380px', (p.photos || [])[0]) + ';border-radius:22px',
+      ficheOverlayStyle: (p.photos || []).length ? 'display:none' : 'position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 13px)',
       ficheQty: s.ficheQty,
       ficheAddLabel: (p.dispo === 'preco' ? 'Réserver · ' : 'Ajouter · ') + this.euro(variant.prix * s.ficheQty),
-      fichePlus: () => this.setState({ ficheQty: Math.min(9, s.ficheQty + 1) }),
+      fichePlus: () => this.setState({ ficheQty: Math.min(Math.max(1, this.availableFor(p.id, variant.id)), s.ficheQty + 1) }),
       ficheMinus: () => this.setState({ ficheQty: Math.max(1, s.ficheQty - 1) }),
       ficheAdd: () => this.addToCart(p.id, variant.id, ficheCons, s.ficheQty),
 
       sheetOpen: !!sp, sheet, sheetQty: s.sheetQty,
       closeSheet: () => this.setState({ sheetId:null }),
-      sheetPlus: () => this.setState({ sheetQty: Math.min(9, s.sheetQty + 1) }),
+      sheetPlus: () => { if (spVariant) this.setState({ sheetQty: Math.min(Math.max(1, this.availableFor(sp.id, spVariant.id)), s.sheetQty + 1) }); },
       sheetMinus: () => this.setState({ sheetQty: Math.max(1, s.sheetQty - 1) }),
       sheetAdd: () => { if (sp) this.addToCart(sp.id, spVariant.id, spCons, s.sheetQty); },
       sheetWrapStyle: 'position:fixed;inset:0;z-index:97;display:flex;align-items:' + (isMobile ? 'flex-end' : 'center') + ';justify-content:center;padding:' + (isMobile ? '0' : '24px') + ';pointer-events:none',
