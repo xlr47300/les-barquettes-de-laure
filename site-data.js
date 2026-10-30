@@ -128,7 +128,7 @@ window.SiteData = (() => {
       { id: "fam", label: "4 personnes", active: "Format 4 personnes actif", weight: "Poids 4 personnes", price: "Prix 4 personnes", stock: "Stock 4 personnes" },
     ];
     return rows.filter((row) => yes(cell(row, "Actif")) && cell(row, "Nom du plat")).map((row, index) => {
-      const variants = definitions.filter((definition) => yes(cell(row, definition.active))).map((definition) => ({
+      const variants = definitions.filter((definition) => definition.id !== 'fam' && yes(cell(row, definition.active))).map((definition) => ({
         id: definition.id, label: definition.label, detail: cell(row, definition.weight), prix: number(cell(row, definition.price)), stock: number(cell(row, definition.stock)),
       }));
       const stock = variants.reduce((sum, variant) => sum + variant.stock, 0);

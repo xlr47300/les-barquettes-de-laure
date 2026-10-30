@@ -49,7 +49,20 @@
 <label>Allergènes (écrire « Aucun identifié » si applicable après vérification)<textarea name="allergens" rows="2" required maxlength="500"></textarea></label>
 <label>DLC / conditions de conservation (informations validées)<textarea name="dlc" rows="2" maxlength="300" placeholder="À renseigner après validation"></textarea></label>
 <label>Réchauffage (facultatif)<textarea name="reheating" rows="2" maxlength="400"></textarea></label>
-<div class="field-grid"><label>État de conservation<select name="conservation"><option>Frais</option><option>Sous vide</option><option>Surgelé</option></select></label><label>Prix individuel (€)<input type="number" step="0.01" min="0.01" max="1000" name="price" required></label><label>Stock initial<input type="number" min="0" max="9999" name="stock" value="0" required></label><label>Lien de la photo<input name="image" type="url" placeholder="https://..."></label></div>
+<div class="field-grid"><label>État de conservation<select name="conservation"><option>Frais</option><option>Sous vide</option><option>Surgelé</option></select></label><label>Prix individuel (€)<input type="number" step="0.01" min="0.01" max="1000" name="price" required></label><label>Stock initial<input type="number" min="0" max="9999" name="stock" value="0" required></label></div>
+<section class="photo-editor" aria-labelledby="photo-title">
+<h3 id="photo-title">Photo du plat</h3>
+<img id="photo-preview" class="photo-preview" alt="Aperçu de la photo" hidden>
+<p id="photo-help" class="helper">Une photo principale, visible sur le site public.</p>
+<div class="photo-actions">
+<label class="btn secondary photo-button">📷 Prendre une photo<input id="photo-camera" type="file" accept="image/*" capture="environment" hidden></label>
+<label class="btn secondary photo-button">▧ Choisir une photo<input id="photo-library" type="file" accept="image/*" hidden></label>
+<button id="remove-photo" type="button" class="btn danger" hidden>Supprimer la photo</button>
+</div>
+<p class="helper">La photo est réduite automatiquement avant l'enregistrement sur Google Drive.</p>
+</section>
+<div class="field-grid"><label class="duo-toggle"><input id="duo-active" name="active2" type="checkbox"> Proposer aussi une barquette pour 2 personnes</label><label class="duo-input">Prix 2 personnes (€)<input name="price2" type="number" min="0.01" max="1000" step="0.01" disabled></label><label class="duo-input">Stock 2 personnes<input name="stock2" type="number" min="0" max="9999" step="1" disabled></label></div>
+<p class="helper" id="formats-note">Le format 4 personnes est conservé pour plus tard. Le format 2 personnes peut aussi être modifié depuis la liste des plats.</p>
 <div class="dialog-actions"><button type="button" class="btn secondary" data-close="product-modal">Annuler</button><button type="submit" class="btn primary" id="save-product-details">Enregistrer le brouillon</button></div></form></dialog>
 </body>
 </html>

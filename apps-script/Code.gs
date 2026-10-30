@@ -64,6 +64,8 @@ function doPost(e) {
       case 'slot': result=editSlot_(data.data);break;
       case 'slotCreate': result=createSlot_(data.data);break;
       case 'productCreate': result=createProduct_(data.data);break;
+      case 'photoUpload': result=uploadProductPhoto_(data.data);break;
+      case 'photoDelete': result=deleteProductPhoto_(data.data);break;
       default: fail_('Action inconnue',400);
     }
     response={ok:true,data:result};
@@ -181,6 +183,7 @@ function createOrder_(input,manual){
         continue;
       }
       if(!LAURE.variants[variant])fail_('Format non reconnu');
+      if(!manual && variant==='fam')fail_('Ce format est temporairement indisponible');
       const p=plats.items.find(p=>yes_(p.Actif)&&slug_(p['Nom du plat'])===itemId);
       if(!p)fail_('Plat indisponible : '+itemId);
       const [activeCol,priceCol,stockCol,label]=LAURE.variants[variant];
@@ -380,6 +383,10 @@ function createProduct_(input){return withLock_(()=>{
   const allergens=clean_(input.allergens,500),image=clean_(input.image,400),conservation=clean_(input.conservation,50);
   const dlc=clean_(input.dlc,300),reheating=clean_(input.reheating,400);
   const price=Number(input.price),stock=Number(input.stock);
+  const active2=input.active2===true;
+  const price2=Number(input.price2),stock2=Number(input.stock2);
+  if(active2&&(!Number.isFinite(price2)||price2<=0||price2>1000||!Number.isInteger(stock2)||stock2<0||stock2>9999))
+    fail_('Prix ou stock incorrect pour 2 personnes');
   if(name.length<3||data.items.some(p=>slug_(p['Nom du plat'])===slug_(name)))fail_('Nom manquant ou déjà utilisé');
   if(!description||!ingredients||!allergens)fail_('Description, ingrédients et allergènes obligatoires pour créer un brouillon');
   if(!['Frais','Sous vide','Surgelé'].includes(conservation))fail_('État de conservation incorrect');
@@ -391,6 +398,100 @@ function createProduct_(input){return withLock_(()=>{
     'DLC / conservation':safeCell_(dlc,300),'Réchauffage':safeCell_(reheating,400),
     'État actuel':conservation,'Photo principale URL Google Drive':image,
     'Format 1 personne actif':'Oui','Prix 1 personne':Math.round(price*100)/100,'Stock 1 personne':stock,
-    'Format 2 personnes actif':'Non','Format 4 personnes actif':'Non'});
-  return {created:true,draft:true};
+    'Format 2 personnes actif':active2?'Oui':'Non','Prix 2 personnes':active2?Math.round(price2*100)/100:'','Stock 2 personnes':active2?stock2:0,
+    'Format 4 personnes actif':'Non'});
+  return {created:true,draft:true,id:slug_(name)};
 });}
+
+
+/**
+ * Photos produits V2. Les photos publiées sont volontairement accessibles via
+ * un lien Google Drive ; aucun fichier client ni document privé n'est partagé.
+ * La seule action de suppression porte sur les fichiers du dossier géré ici.
+ */
+function laurePhotosFolder_(){
+  const props=PropertiesService.getScriptProperties();
+  const id=props.getProperty('LAURE_PHOTOS_FOLDER_ID');
+  if(id){
+    const saved=DriveApp.getFolderById(id);
+    if(saved.isTrashed())fail_('Dossier photos placé à la corbeille',503);
+    return saved;
+  }
+  const catalogFile=DriveApp.getFileById(prop_('CATALOG_SPREADSHEET_ID'));
+  const parents=catalogFile.getParents();
+  const parent=parents.hasNext()?parents.next():DriveApp.getRootFolder();
+  const title='Photos des plats - Les Barquettes de Laure';
+  const matches=parent.getFoldersByName(title);
+  const folder=matches.hasNext()?matches.next():parent.createFolder(title);
+  props.setProperty('LAURE_PHOTOS_FOLDER_ID',folder.getId());
+  return folder;
+}
+function productById_(id){
+  const data=sourceData_('PLATS');
+  const product=data.items.find(p=>slug_(p['Nom du plat'])===clean_(id,150));
+  if(!product)fail_('Plat introuvable',404);
+  return {data,product};
+}
+function driveId_(url){
+  const str=String(url||'');
+  const match=str.match(/\/d\/([A-Za-z0-9_-]{15,})/)||str.match(/[?&]id=([A-Za-z0-9_-]{15,})/);
+  return match?match[1]:'';
+}
+function isInLaureFolder_(file,folder){
+  const parents=file.getParents();
+  while(parents.hasNext())if(parents.next().getId()===folder.getId())return true;
+  return false;
+}
+function cleanupOldPhoto_(oldUrl,folder){
+  const oldId=driveId_(oldUrl);
+  if(!oldId)return;
+  try{
+    const data=sourceData_('PLATS');
+    if(data.items.some(p=>driveId_(p['Photo principale URL Google Drive'])===oldId))return;
+    const file=DriveApp.getFileById(oldId);
+    if(isInLaureFolder_(file,folder))file.setTrashed(true);
+  }catch(err){console.warn('Ancienne photo conservée : '+err.message);}
+}
+function uploadProductPhoto_(input){return withLock_(()=>{
+  if(!input || typeof input!=='object')fail_('Photo absente');
+  const encoded=String(input.jpegBase64||'');
+  if(!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)||encoded.length>700000||encoded.length<100)
+    fail_('Photo JPEG incorrecte ou trop volumineuse');
+  const bytes=Utilities.base64Decode(encoded);
+  if(bytes.length>500000||bytes.length<100||((bytes[0]&255)!==255)||((bytes[1]&255)!==216)||((bytes[2]&255)!==255))
+    fail_('Photo JPEG invalide ou trop volumineuse (500 Ko maximum)');
+  const {data,product}=productById_(input.id);
+  const folder=laurePhotosFolder_();
+  const oldUrl=product['Photo principale URL Google Drive']||'';
+  const filename='Plat '+slug_(product['Nom du plat'])+' '+Utilities.formatDate(new Date(),'Europe/Paris','yyyyMMdd-HHmmss')+'.jpg';
+  const file=folder.createFile(Utilities.newBlob(bytes,'image/jpeg',filename));
+  let saved=false;
+  try{
+    // Un lien public de consultation pour cette photo uniquement.
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
+    const url='https://drive.google.com/file/d/'+file.getId()+'/view';
+    updateCell_(data,product._row,'Photo principale URL Google Drive',url);
+    saved=true;
+    cleanupOldPhoto_(oldUrl,folder);
+    return {uploaded:true,image:url};
+  }finally{
+    if(!saved){try{file.setTrashed(true);}catch(err){console.warn(err);}}
+  }
+});}
+function deleteProductPhoto_(input){return withLock_(()=>{
+  const {data,product}=productById_(input.id);
+  const oldUrl=product['Photo principale URL Google Drive']||'';
+  if(!oldUrl)return {deleted:false};
+  const folder=laurePhotosFolder_();
+  updateCell_(data,product._row,'Photo principale URL Google Drive','');
+  // Ne place jamais à la corbeille une photo extérieure au dossier géré.
+  cleanupOldPhoto_(oldUrl,folder);
+  return {deleted:true};
+});}
+
+/** À exécuter UNE FOIS dans l'éditeur Apps Script pour autoriser Drive et créer le dossier. */
+function initialiserPhotosLaure(){
+  const folder=laurePhotosFolder_();
+  Logger.log('Dossier photos créé ou retrouvé : '+folder.getUrl());
+  return folder.getUrl();
+}

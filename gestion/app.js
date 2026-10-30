@@ -86,9 +86,58 @@ function renderClients(){
   const list=[...people.values()].sort((a,b)=>a.name.localeCompare(b.name,'fr'));
   return `<section class="panel">${label('Carnet clients',list.length+' client(s)')}<div class="toolbar"><input type="search" id="client-search" placeholder="Rechercher un client ou un téléphone…" aria-label="Rechercher un client"></div><p class="helper">Les coordonnées sont issues des commandes, sans double saisie.</p><div class="clients" style="margin-top:15px">${list.length?list.map(p=>`<article class="client" data-client-search="${esc((p.name+' '+p.phone+' '+p.email).toLowerCase())}"><strong>${esc(p.name)}</strong><div class="muted short">${esc(p.phone)}${p.email?'<br>'+esc(p.email):''}</div><div class="short">${p.n} commande(s) · ${eur(p.total)}</div></article>`).join(''):'<div class="empty">Aucun client enregistré.</div>'}</div></section>`;
 }
+// Photo de Google Drive déjà référencée dans la fiche.
+function photoUrl(value){
+  const url=String(value||'').trim();
+  const match=url.match(/\/d\/([A-Za-z0-9_-]+)/)||url.match(/[?&]id=([A-Za-z0-9_-]+)/);
+  if(match)return `https://lh3.googleusercontent.com/d/${match[1]}=w800`;
+  return /^https:\/\//.test(url)?url:'';
+}
+const photoState={base64:'',preview:'',busy:false};
+function resetPhoto(product){
+  photoState.base64='';photoState.preview='';photoState.busy=false;
+  $('#photo-preview').src=product?.image?photoUrl(product.image):'';
+  $('#photo-preview').hidden=!product?.image;
+  $('#photo-help').textContent=product?.image?'Photo actuellement enregistrée. Vous pouvez la remplacer.':'Aucune photo. Choisissez ou prenez une photo.';
+  $('#remove-photo').hidden=!product?.image;
+  $('#photo-camera').value='';$('#photo-library').value='';
+}
+function toggleDuoFields(){
+  const isNew=!$('#product-form').elements.editId.value;
+  const enabled=isNew&&$('#duo-active').checked;
+  ['price2','stock2'].forEach(name=>{const el=$('#product-form').elements[name];el.disabled=!enabled;el.required=enabled;});
+  $('#duo-active').closest('.duo-toggle').hidden=!isNew;
+  document.querySelectorAll('.duo-input').forEach(el=>el.hidden=!isNew);
+}
+async function compressPhoto(file){
+  if(!file||file.size>20_000_000)throw Error('Photo trop volumineuse (20 Mo maximum avant réduction).');
+  const objectUrl=URL.createObjectURL(file);
+  try{
+    const img=new Image();
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('Photo illisible. Utilisez une image JPEG ou convertissez votre photo HEIC en JPEG.'));img.src=objectUrl;});
+    let edge=1400, quality=.80, dataUrl='';
+    for(let attempt=0;attempt<7;attempt++){
+      const scale=Math.min(1,edge/Math.max(img.naturalWidth,img.naturalHeight));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+      canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+      const context=canvas.getContext('2d');
+      if(!context)throw Error('Traitement de la photo indisponible sur cet appareil.');
+      context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
+      context.drawImage(img,0,0,canvas.width,canvas.height);
+      dataUrl=canvas.toDataURL('image/jpeg',quality);
+      canvas.width=0;canvas.height=0;
+      if(dataUrl.startsWith('data:image/jpeg;base64,')&&dataUrl.length<650000)break;
+      edge=Math.max(650,Math.round(edge*.83));quality=Math.max(.62,quality-.035);
+    }
+    if(!dataUrl.startsWith('data:image/jpeg;base64,')||dataUrl.length>700000)
+      throw Error('Impossible de réduire suffisamment la photo. Essayez une photo moins lourde.');
+    return {dataUrl,base64:dataUrl.split(',')[1]};
+  }finally{URL.revokeObjectURL(objectUrl);}
+}
 function renderCatalogue(){
   const ps=state.data?.products||[];
-  return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les plats</h2><button type="button" id="new-product" class="btn primary">+ Nouveau plat</button></div><div class="notice">Modification directe des stocks et prix du Google Sheets « Catalogue ». Les informations du site public se mettent à jour à son prochain chargement.</div><div class="catalogue-grid">${ps.map(p=>`<article class="product" data-product="${esc(p.id)}"><div class="head"><h3>${esc(p.name)}</h3><label class="row"><input type="checkbox" class="product-active" ${p.active?'checked':''}> <span class="short">Publié</span></label></div><div class="row space" style="margin-top:9px"><span class="muted short">${esc(p.conservation)} · ${p.dlc?'DLC renseignée':'DLC à renseigner'}</span><button type="button" class="btn secondary product-edit">Modifier la fiche</button></div>${p.variants.map(v=>`<div class="variant" data-variant="${esc(v.id)}"><div><b class="short">${esc(v.label)}</b><label class="row"><input type="checkbox" class="variant-active" style="width:16px;min-height:16px" ${v.active?'checked':''}> Format actif</label></div><label>Prix (€)<input type="number" class="price" min="0" max="1000" step="0.01" value="${v.price}"></label><label>Stock<input type="number" class="stock" min="0" max="9999" step="1" value="${v.stock}"></label><button type="button" class="btn secondary product-save">Enregistrer</button></div>`).join('')}</article>`).join('')}</div>`;
+  return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les plats</h2><button type="button" id="new-product" class="btn primary">+ Nouveau plat</button></div><div class="notice">Modification directe des stocks et prix du Google Sheets « Catalogue ». Les informations du site public se mettent à jour à son prochain chargement.</div><div class="catalogue-grid">${ps.map(p=>`<article class="product" data-product="${esc(p.id)}"><div class="head"><h3>${esc(p.name)}</h3><label class="row"><input type="checkbox" class="product-active" ${p.active?'checked':''}> <span class="short">Publié</span></label></div>${p.image?`<img class="product-thumb" src="${esc(photoUrl(p.image))}" loading="lazy" alt="Photo de ${esc(p.name)}">`:''}<div class="row space" style="margin-top:9px"><span class="muted short">${esc(p.conservation)} · ${p.dlc?'DLC renseignée':'DLC à renseigner'}</span><button type="button" class="btn secondary product-edit">Modifier la fiche</button></div>${p.variants.filter(v=>v.id!=='fam').map(v=>`<div class="variant" data-variant="${esc(v.id)}"><div><b class="short">${esc(v.label)}</b><label class="row"><input type="checkbox" class="variant-active" style="width:16px;min-height:16px" ${v.active?'checked':''}> Format actif</label></div><label>Prix (€)<input type="number" class="price" min="0" max="1000" step="0.01" value="${v.price}"></label><label>Stock<input type="number" class="stock" min="0" max="9999" step="1" value="${v.stock}"></label><button type="button" class="btn secondary product-save">Enregistrer</button></div>`).join('')}</article>`).join('')}</div>`;
 }
 function slotCards(slots){
   return `<div class="slot-grid">${slots.map(s=>`<article class="slot-card" data-date="${esc(s.date)}" data-time="${esc(s.time)}"><b>${esc(shortDate(s.date))}</b><p>${esc(s.time)}</p><label>Places disponibles<input class="places" type="number" min="0" max="1000" step="1" value="${s.available}"></label><label class="row"><input type="checkbox" class="slot-active" style="width:17px;min-height:17px" ${s.active?'checked':''}> Créneau ouvert</label><button class="btn secondary slot-save" type="button">Enregistrer</button></article>`).join('')}</div>`;
@@ -126,8 +175,8 @@ function openManual(){
 document.addEventListener('click',async e=>{
   const tab=e.target.closest('[data-page]');if(tab){nav(tab.dataset.page);return;}
   const closer=e.target.closest('[data-close]');if(closer){document.getElementById(closer.dataset.close)?.close();return;}
-  if(e.target.closest('#new-product')){const form=$('#product-form');form.reset();form.elements.name.readOnly=false;form.elements.price.disabled=false;form.elements.stock.disabled=false;form.elements.editId.value='';$('#product-title').textContent='Créer une fiche plat';$('#save-product-details').textContent='Enregistrer le brouillon';$('#product-modal').showModal();return;}
-  const edit=e.target.closest('.product-edit');if(edit){const id=edit.closest('[data-product]').dataset.product;const product=(state.data?.products||[]).find(p=>p.id===id);if(!product)return;const form=$('#product-form');form.reset();form.elements.editId.value=id;for(const key of ['description','ingredients','allergens','dlc','reheating','image','conservation'])form.elements[key].value=product[key]||'';form.elements.name.value=product.name;form.elements.name.readOnly=true;form.elements.price.disabled=true;form.elements.stock.disabled=true;form.elements.price.value=(product.variants.find(v=>v.id==='indiv')||{}).price||0;form.elements.stock.value=(product.variants.find(v=>v.id==='indiv')||{}).stock||0;$('#product-title').textContent='Modifier la fiche : '+product.name;$('#save-product-details').textContent='Enregistrer la fiche';$('#product-modal').showModal();return;}
+  if(e.target.closest('#new-product')){const form=$('#product-form');form.reset();form.elements.name.readOnly=false;form.elements.price.disabled=false;form.elements.stock.disabled=false;form.elements.editId.value='';$('#duo-active').disabled=false;$('#duo-active').checked=false;$('#product-title').textContent='Créer une fiche plat';$('#save-product-details').textContent='Enregistrer le brouillon';resetPhoto(null);toggleDuoFields();$('#product-modal').showModal();return;}
+  const edit=e.target.closest('.product-edit');if(edit){const id=edit.closest('[data-product]').dataset.product;const product=(state.data?.products||[]).find(p=>p.id===id);if(!product)return;const form=$('#product-form');form.reset();form.elements.editId.value=id;for(const key of ['description','ingredients','allergens','dlc','reheating','conservation'])form.elements[key].value=product[key]||'';form.elements.name.value=product.name;form.elements.name.readOnly=true;form.elements.price.disabled=true;form.elements.stock.disabled=true;form.elements.price.value=(product.variants.find(v=>v.id==='indiv')||{}).price||0;form.elements.stock.value=(product.variants.find(v=>v.id==='indiv')||{}).stock||0;$('#duo-active').disabled=true;$('#duo-active').checked=!!product.variants.find(v=>v.id==='duo')?.active;toggleDuoFields();resetPhoto(product);$('#product-title').textContent='Modifier la fiche : '+product.name;$('#save-product-details').textContent='Enregistrer la fiche';$('#product-modal').showModal();return;}
   if(e.target.closest('#new-slot')){
     const form=$('#slot-form');form.reset();
     form.elements.date.min=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
@@ -141,9 +190,32 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('.manual-line .remove')){const lines=document.querySelectorAll('.manual-line');if(lines.length>1)e.target.closest('.manual-line').remove();return;}
   const payment=e.target.closest('.payment-toggle');if(payment){const card=payment.closest('[data-id]');const order=orders().find(x=>x.id===card.dataset.id);if(order)await mutate({action:'payment',id:order.id,payment:order.payment==='Réglée'?'Non réglée':'Réglée'});return;}
   const product=e.target.closest('.product-save');if(product){const card=product.closest('[data-product]'),line=product.closest('[data-variant]');const price=Number(line.querySelector('.price').value),stock=Number(line.querySelector('.stock').value);if(!Number.isFinite(price)||!Number.isInteger(stock)){notice('Prix ou stock incorrect');return;}await mutate({action:'product',id:card.dataset.product,variant:line.dataset.variant,price,stock,variantActive:line.querySelector('.variant-active').checked});return;}
+  if(e.target.closest('#remove-photo')){
+    const id=$('#product-form').elements.editId.value;
+    if(!id||state.busy)return;
+    if(!window.confirm('Supprimer la photo de ce plat sur le site et dans Drive ?'))return;
+    if(await mutate({action:'photoDelete',id})){
+      const updated=state.data?.products?.find(p=>p.id===id);
+      resetPhoto(updated);notice('Photo supprimée.');
+    }
+    return;
+  }
   const slot=e.target.closest('.slot-save');if(slot){const card=slot.closest('[data-date]');await mutate({action:'slot',date:card.dataset.date,time:card.dataset.time,available:Number(card.querySelector('.places').value),active:card.querySelector('.slot-active').checked});return;}
 });
 document.addEventListener('change',async e=>{
+  if(e.target.matches('#duo-active')){toggleDuoFields();return;}
+  if(e.target.matches('#photo-camera, #photo-library')){
+    const file=e.target.files?.[0];if(!file)return;
+    photoState.busy=true;$('#photo-help').textContent='Préparation de la photo…';
+    try{
+      const photo=await compressPhoto(file);
+      photoState.base64=photo.base64;photoState.preview=photo.dataUrl;
+      $('#photo-preview').src=photo.dataUrl;$('#photo-preview').hidden=false;
+      $('#photo-help').textContent='Photo prête à être enregistrée avec la fiche.';
+    }catch(error){photoState.base64='';photoState.preview='';$('#photo-help').textContent=error.message;notice(error.message);}
+    finally{photoState.busy=false;}
+    return;
+  }
   if(e.target.matches('#filter-status')){state.status=e.target.value;renderOrderResults();}
   else if(e.target.matches('#filter-date')){state.date=e.target.value;renderOrderResults();}
   else if(e.target.matches('.order-status')){const card=e.target.closest('[data-id]');const id=card?.dataset.id,stat=e.target.value;if(stat==='Annulée'&&!window.confirm('Annuler la commande et rétablir les stocks ?')){render();return;}await mutate({action:'status',id,status:stat});}
@@ -172,9 +244,33 @@ $('#slot-form').addEventListener('submit',async e=>{
 });
 $('#product-form').addEventListener('submit',async e=>{
   e.preventDefault();
+  if(state.busy||photoState.busy){notice('Veuillez terminer la préparation de la photo.');return;}
   const data=new FormData(e.currentTarget);
-  const editId=data.get('editId');
-  const details={description:data.get('description'),ingredients:data.get('ingredients'),allergens:data.get('allergens'),dlc:data.get('dlc'),reheating:data.get('reheating'),conservation:data.get('conservation'),image:data.get('image')};
-  const payload=editId?{action:'product',id:editId,details}:{action:'productCreate',name:data.get('name'),...details,price:Number(data.get('price')),stock:Number(data.get('stock'))};
-  if(await mutate(payload)){$('#product-modal').close();nav('catalogue');notice(editId?'Fiche mise à jour':'Brouillon créé. Vérifier les données avant publication.');}
+  const editId=String(data.get('editId')||'');
+  const details={description:data.get('description'),ingredients:data.get('ingredients'),allergens:data.get('allergens'),dlc:data.get('dlc'),reheating:data.get('reheating'),conservation:data.get('conservation')};
+  const payload=editId?{action:'product',id:editId,details}:{action:'productCreate',name:data.get('name'),...details,
+    price:Number(data.get('price')),stock:Number(data.get('stock')),
+    active2:data.has('active2'),price2:Number(data.get('price2')),stock2:Number(data.get('stock2'))};
+  state.busy=true;
+  $('#save-product-details').disabled=true;
+  let savedDetails=false;
+  try{
+    const result=await api(payload);
+    savedDetails=true;
+    const id=editId||result.id;
+    if(photoState.base64){
+      if(!id)throw Error('Fiche créée, mais identifiant photo manquant. Réouvrez la fiche pour ajouter la photo.');
+      $('#photo-help').textContent='Enregistrement de la photo dans Drive…';
+      await api({action:'photoUpload',id,jpegBase64:photoState.base64});
+    }
+    $('#product-modal').close();
+    await refresh(true);
+    nav('catalogue');
+    notice(photoState.base64?'Fiche et photo enregistrées.':'Fiche enregistrée.');
+  }catch(error){
+    if(savedDetails){
+      $('#product-modal').close();await refresh(true);nav('catalogue');
+      window.alert('La fiche a été enregistrée, mais la photo n’a pas été enregistrée : '+error.message+'\nVous pouvez reprendre la photo depuis « Modifier la fiche ».');
+    }else notice(error.message);
+  }finally{state.busy=false;$('#save-product-details').disabled=false;}
 });

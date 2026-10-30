@@ -8,3 +8,13 @@
 .slot-archive{margin-top:24px;padding:14px;background:var(--paper);border:1px solid var(--border);border-radius:15px}
 .slot-archive summary{cursor:pointer;font-weight:600;color:var(--sage);padding:7px 3px}
 .slot-archive .slot-grid{margin-top:14px}
+
+/* Ajout de photo et fiches simplifiées - V2 */
+.product-thumb{width:100%;max-height:190px;object-fit:cover;border-radius:12px;margin-top:10px;border:1px solid var(--border)}
+.photo-editor{padding:14px;border-radius:14px;border:1px solid var(--border);background:#fff;display:grid;gap:10px}
+.photo-editor h3{font-size:17px}.photo-preview{display:block;width:100%;max-height:290px;object-fit:contain;background:#f8f5f0;border-radius:12px}
+.photo-preview[hidden],.photo-button input[hidden],.duo-toggle[hidden],.duo-input[hidden]{display:none!important}
+.photo-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.photo-button{display:inline-flex!important;align-items:center;justify-content:center;cursor:pointer;color:var(--sage)!important;background:#EAEFE2;padding:10px 15px;border-radius:999px;font-weight:600!important;min-height:44px;font-size:13px!important}
+.duo-toggle{display:flex!important;align-items:center;gap:9px;grid-column:1/-1;color:var(--ink)!important}.duo-toggle[hidden]{display:none!important}
+.duo-toggle input{width:18px;min-height:18px;flex-shrink:0}.dialog-body .duo-input input{max-width:100%}
+@media(max-width:760px){.photo-button{flex:1;white-space:normal;text-align:center}.photo-actions .btn{white-space:normal}}

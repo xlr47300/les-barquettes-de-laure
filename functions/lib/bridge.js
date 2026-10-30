@@ -23,14 +23,14 @@ export async function callAppsScript(env, action, data={}) {
   }
   return result.data;
 }
-export async function readBody(request) {
+export async function readBody(request, maxBytes=18_000) {
   const len=Number(request.headers.get('content-length'));
-  if (len > 18_000) throw Object.assign(new Error('Demande trop volumineuse'),{status:413});
+  if (len > maxBytes) throw Object.assign(new Error('Demande trop volumineuse'),{status:413});
   if (!(request.headers.get('content-type')||'').includes('application/json'))
     throw Object.assign(new Error('Format JSON attendu'),{status:415});
   let value;
   try {value=await request.json();}catch(e){throw Object.assign(new Error('Données illisibles'),{status:400});}
-  if (!value || typeof value !== 'object' || Array.isArray(value) || JSON.stringify(value).length>18_000)
+  if (!value || typeof value !== 'object' || Array.isArray(value) || JSON.stringify(value).length>maxBytes)
     throw Object.assign(new Error('Demande invalide'),{status:400});
   return value;
 }
