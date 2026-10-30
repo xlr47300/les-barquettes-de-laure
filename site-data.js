@@ -22,7 +22,7 @@ window.SiteData = (() => {
   const slug = (value) => key(value).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "element";
 
   function endpoint(sheetId) {
-    return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${sheetId}&range=A4:AZ1000`;
+    return `/api/catalogue?gid=${sheetId}`;
   }
 
   function parseCsv(text) {
