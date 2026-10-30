@@ -160,13 +160,24 @@ window.SiteData = (() => {
 
   function buildJours(rows) {
     const groups = new Map();
-    rows.filter((row) => yes(cell(row, "Actif"))).sort((a, b) => cell(a, "Date").localeCompare(cell(b, "Date")) || cell(a, "Heure").localeCompare(cell(b, "Heure"))).forEach((row) => {
-      const dateRaw = cell(row, "Date");
-      const id = slug(`${dateRaw}-${cell(row, "Jour")}`);
-      const current = groups.get(id) || { id, jour: cell(row, "Jour"), date: formatDate(dateRaw), dateRaw, creneaux: [] };
-      current.creneaux.push({ id: slug(`${dateRaw}-${cell(row, "Heure")}`), label: cell(row, "Heure"), restant: number(cell(row, "Places disponibles")) });
-      groups.set(id, current);
-    });
+    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris", year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
+    function toIso(raw) {
+      const date = String(raw || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
+      const fr = date.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      return fr ? `${fr[3]}-${fr[2]}-${fr[1]}` : "";
+    }
+    rows.filter((row) => yes(cell(row, "Actif")))
+      .map((row) => ({ ...row, _iso: toIso(cell(row, "Date")) }))
+      .filter((row) => row._iso && row._iso >= today && number(cell(row, "Places disponibles")) >= 0)
+      .sort((a, b) => a._iso.localeCompare(b._iso) || cell(a, "Heure").localeCompare(cell(b, "Heure")))
+      .forEach((row) => {
+        const dateRaw = row._iso;
+        const id = slug(`${dateRaw}-${cell(row, "Jour")}`);
+        const current = groups.get(id) || { id, jour: cell(row, "Jour"), date: formatDate(dateRaw), dateRaw, creneaux: [] };
+        current.creneaux.push({ id: slug(`${dateRaw}-${cell(row, "Heure")}`), label: cell(row, "Heure"), restant: number(cell(row, "Places disponibles")) });
+        groups.set(id, current);
+      });
     return [...groups.values()].map((day) => ({ ...day, plage: day.creneaux.length ? `${day.creneaux[0].label} – ${day.creneaux[day.creneaux.length - 1].label}` : "" }));
   }
 

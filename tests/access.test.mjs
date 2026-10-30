@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
+import { checkAdmin } from '../functions/lib/auth.js';
+import {onRequestPost as publicOrder} from '../functions/api/order.js';
+import {onRequestGet as publicConfig} from '../functions/api/config.js';
+const {subtle}=webcrypto;
+const keyPair=await subtle.generateKey({name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['sign','verify']);
+const jwk=await subtle.exportKey('jwk',keyPair.publicKey);jwk.kid='testkey';
+const b64=v=>Buffer.from(typeof v==='string'?v:JSON.stringify(v)).toString('base64url');
+const env={ACCESS_TEAM_DOMAIN:'testteam.cloudflareaccess.com',ACCESS_AUD:'aud123',ADMIN_EMAIL:'laure@example.test'};
+async function createToken(email='laure@example.test'){
+  const header=b64({alg:'RS256',typ:'JWT',kid:'testkey'});
+  const payload=b64({iss:'https://testteam.cloudflareaccess.com',aud:['aud123'],exp:Math.floor(Date.now()/1000)+120,email});
+  const input=header+'.'+payload;
+  const signature=await subtle.sign('RSASSA-PKCS1-v1_5',keyPair.privateKey,new TextEncoder().encode(input));
+  return input+'.'+Buffer.from(signature).toString('base64url');
+}
+const fetchOriginal=globalThis.fetch;
+globalThis.fetch=async()=>new Response(JSON.stringify({keys:[jwk]}),{status:200});
+const request=token=>new Request('https://site.example.test/gestion/',{headers:{'Cf-Access-Jwt-Assertion':token}});
+assert.equal((await checkAdmin(request(await createToken()),env)).email,'laure@example.test');
+await assert.rejects(checkAdmin(request(await createToken('intrus@example.test')),env));
+await assert.rejects(checkAdmin(request('invalid.invalid.invalid'),env));
+await assert.rejects(checkAdmin(request(await createToken()),{...env,ACCESS_AUD:'bad'}));
+globalThis.fetch=fetchOriginal;
+const result=await publicOrder({request:new Request('https://site.example.test/api/order',{method:'POST',headers:{'Origin':'https://site.example.test','Content-Type':'application/json'},body:'{}'}),env:{ORDERS_ENABLED:'false'}});
+assert.equal(result.status,503);
+const config=await publicConfig({env:{ORDERS_ENABLED:'false'}});
+assert.equal((await config.json()).ordersEnabled,false);
+console.log('Tests OK : JWT signé, e-mail interdit, jeton invalide, AUD incorrect, commandes fermées.');

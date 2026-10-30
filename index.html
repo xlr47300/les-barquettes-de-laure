@@ -8,9 +8,16 @@
 <meta name="theme-color" content="#FBF6EE">
 <link rel="icon" type="image/png" href="uploads/Logo%20les%20barquettes%20de%20Laure.png">
 <script src="./site-data.js"></script>
+<script src="/laure-order.js" defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="./support.js"></script>
 </head>
 <body>
+<div id="catalogue-status" style="position:fixed;z-index:10000;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;text-align:center;background:#FBF6EE;color:#2E2723;font:15px/1.5 'Work Sans',sans-serif">
+  <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure" style="width:100px;height:100px;object-fit:contain">
+  <strong style="font:600 25px/1.3 Petrona,Georgia,serif" id="catalogue-text">Chargement du menu de la semaine…</strong>
+  <button type="button" id="catalogue-retry" onclick="location.reload()" style="display:none;background:#4E6141;border:0;border-radius:99px;color:white;padding:12px 22px;font:500 14px 'Work Sans';cursor:pointer">Réessayer</button>
+</div>
 <x-dc>
 <helmet data-dc-atomics>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -316,14 +323,11 @@
         <div style="{{ signupWrap }}">
           <div style="flex:1 1 280px;min-width:240px">
             <h2 style="{{ h2GreenStyle }}">Recevoir le menu de la semaine</h2>
-            <p style="margin:10px 0 0;font:300 14.5px/1.6 'Work Sans';color:#4E6141;max-width:32em">Chaque lundi, je vous envoie la liste des plats et les créneaux de retrait. Un message par semaine, rien d'autre.</p>
+            <p style="margin:10px 0 0;font:300 14.5px/1.6 'Work Sans';color:#4E6141;max-width:32em">Les plats évoluent selon les préparations de la semaine. Retrouvez ici les prochaines disponibilités.</p>
           </div>
-          <form onSubmit="{{ onSignup }}" style="flex:1 1 300px;min-width:240px;display:flex;flex-direction:column;gap:10px">
-            <input placeholder="Votre prénom" style="min-height:52px;padding:15px 17px;border-radius:14px;border:1px solid rgba(78,97,65,.28);background:#FBF6EE;font:400 15px/1 'Work Sans';color:#2E2723">
-            <input placeholder="Téléphone ou email" style="min-height:52px;padding:15px 17px;border-radius:14px;border:1px solid rgba(78,97,65,.28);background:#FBF6EE;font:400 15px/1 'Work Sans';color:#2E2723">
-            <button type="submit" style="min-height:54px;border-radius:999px;border:0;background:#4E6141;color:#FBF6EE;font:500 15px/1 'Work Sans';cursor:pointer" style-hover="background:#3E4E34">Je m'inscris</button>
-            <span style="font:300 11.5px/1.5 'Work Sans';color:#6C7A5E">Vos coordonnées servent uniquement à envoyer le menu. Désinscription en un message.</span>
-          </form>
+          <div style="flex:1 1 300px;min-width:240px;display:flex;align-items:center">
+            <p style="font:400 14px/1.6 'Work Sans';color:#4E6141">L'inscription à la liste de diffusion sera proposée prochainement. Pour l'instant, vous pouvez contacter Laure directement.</p>
+          </div>
         </div>
       </section>
     </main>
@@ -631,8 +635,11 @@
             <span style="font:500 12.5px/1.3 'Work Sans';color:#E8C9B5">Créneau choisi</span>
             <span style="font:400 14px/1.4 'Work Sans';color:#FBF6EE">{{ creneauResume }}</span>
           </div>
-          <button type="submit" style="{{ submitStyle }}">Envoyer ma demande</button>
+          <div id="laure-turnstile" style="min-height:65px;max-width:100%"></div>
+          <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px" value="">
+          <button type="submit" disabled="{{ submitDisabled }}" style="{{ submitStyle }}">{{ submitButtonText }}</button>
           <span style="font:300 12px/1.55 'Work Sans';color:rgba(251,246,238,.55);text-align:center">{{ submitHint }}</span>
+          <sc-if value="{{ hasFormError }}"><p role="alert" style="color:#FFE3D7;background:#7A3528;padding:12px;border-radius:10px;font:400 13px/1.45 'Work Sans'">{{ formError }}</p></sc-if>
         </aside>
       </form>
     </main>
@@ -711,7 +718,7 @@
             <span style="position:relative;display:block;width:170px;height:116px;overflow:hidden;background:#fff;border-radius:10px">
               <img src="uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Les Barquettes de Laure — des petits plats maison, prêts quand vous l'êtes" style="position:absolute;width:272px;max-width:none;height:auto;left:-53px;top:-31px">
             </span>
-            <p style="margin:0;font:300 13.5px/1.65 'Work Sans';color:rgba(251,246,238,.66);max-width:26em">Cuisine préparée à domicile, déclarée en atelier de remise directe.</p>
+            <p style="margin:0;font:300 13.5px/1.65 'Work Sans';color:rgba(251,246,238,.66);max-width:26em">Des plats maison préparés en petites quantités.</p>
           </div>
           <div style="flex:1 1 160px;min-width:150px;display:flex;flex-direction:column;gap:9px">
             <span style="font:500 11px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#B79A7E">Retrait</span>
@@ -1046,9 +1053,9 @@ class Component extends DCLogic {
     modeForce: null, vw: (typeof window !== 'undefined' ? window.innerWidth : 1200),
     route: 'home', productId: 'parmentier', ficheVariant: 'indiv', ficheConservation: null, ficheQty: 1,
     sheetId: null, sheetVariant: 'indiv', sheetConservation: null, sheetQty: 1,
-    cart: [], drawerOpen: false, toast: '',
+    cart: [], drawerOpen: false, toast: '', sending:false, formError:'',
     filters: { conservation:'Tous', format:'Tous', dispo:'Tous' },
-    jour: 'ven', creneau: 'v3', form: { nom:'', tel:'', email:'', note:'', ok:true }, ref: 'L-2608'
+    jour: 'ven', creneau: 'v3', form: { nom:'', tel:'', email:'', note:'', ok:false }, ref: 'L-2608'
   };
 
   componentDidMount() {
@@ -1056,15 +1063,20 @@ class Component extends DCLogic {
     window.addEventListener('resize', this._onResize);
     this.loadGoogleSheet();
   }
-  componentDidUpdate() { this.applySheetCopy(); }
+  componentDidUpdate() {
+    this.applySheetCopy();
+    if (this.state.route === 'commande' && window.LaureOrders) {
+      setTimeout(() => window.LaureOrders.ensureWidget(), 0);
+    }
+  }
   componentWillUnmount() { window.removeEventListener('resize', this._onResize); clearTimeout(this._t); }
 
   loadGoogleSheet() {
     if (!window.SiteData) return;
     window.SiteData.load().then((data) => {
-      if (!data.plats.length || !data.jours.length) return;
+      if (!data.plats.length || !data.jours.length) throw new Error('Catalogue incomplet');
       PLATS = data.plats;
-      FORMULES = data.formules;
+      FORMULES = []; // Formules masquées en V1 : composants / stock non suivis.
       MOMENTS = data.moments;
       ETAPES = data.etapes;
       ENGAGEMENTS = data.engagements;
@@ -1080,8 +1092,13 @@ class Component extends DCLogic {
         dataVersion: Date.now()
       });
       this.applySheetCopy();
+      document.getElementById('catalogue-status')?.remove();
     }).catch(() => {
-      // The built-in menu stays visible while Google Sheets is not public yet.
+      this._catalogueUnavailable = true;
+      const status = document.getElementById('catalogue-text');
+      if (status) status.textContent = 'Le menu est temporairement indisponible. Aucune commande ne peut être passée.';
+      const retry = document.getElementById('catalogue-retry');
+      if (retry) retry.style.display = 'inline-block';
     });
   }
 
@@ -1358,7 +1375,7 @@ class Component extends DCLogic {
         style:'display:flex;align-items:center;justify-content:center;height:34px;border-radius:9px;font:' + (k ? '500' : '300') + " 12.5px/1 'Work Sans';" + (k === 'retrait' ? 'background:#C9613F;color:#FBF6EE' : k === 'limite' ? 'background:#EAEFE2;color:#4E6141;border:1px solid #A8B795' : 'background:#F4EADC;color:#A9998C') });
     }
 
-    const formOk = s.form.ok && s.form.nom.trim().length > 1 && s.form.tel.trim().length > 5 && !!creneauObj && count > 0;
+    const formOk = s.form.ok && s.form.nom.trim().length > 1 && s.form.tel.replace(/\D/g, '').length >= 9 && !!creneauObj && count > 0;
     const mobileTabs = [
       { icon:'maison', label:'Accueil', key:'home', go:() => this.nav('home') },
       { icon:'marmite', label:'Les plats', key:'plats', go:() => this.nav('plats') },
@@ -1497,15 +1514,34 @@ class Component extends DCLogic {
       setEmail:(e) => this.setState({ form:{ ...s.form, email:e.target.value } }),
       setNote:(e) => this.setState({ form:{ ...s.form, note:e.target.value } }),
       toggleOk:() => this.setState({ form:{ ...s.form, ok:!s.form.ok } }),
-      submitStyle: "min-height:58px;border-radius:999px;border:0;font:500 16px/1 'Work Sans';cursor:" + (formOk ? 'pointer' : 'not-allowed') + ';background:' + (formOk ? '#C9613F' : 'rgba(251,246,238,.16)') + ';color:' + (formOk ? '#FBF6EE' : 'rgba(251,246,238,.45)'),
+      submitStyle: "min-height:58px;border-radius:999px;border:0;font:500 16px/1 'Work Sans';cursor:" + (formOk && !s.sending ? 'pointer' : 'not-allowed') + ';background:' + (formOk && !s.sending ? '#C9613F' : 'rgba(251,246,238,.16)') + ';color:' + (formOk && !s.sending ? '#FBF6EE' : 'rgba(251,246,238,.45)'),
+      submitDisabled: !formOk || s.sending,
+      submitButtonText: s.sending ? 'Envoi en cours…' : 'Envoyer ma demande',
+      hasFormError: !!s.formError,
+      formError: s.formError,
       submitHint: formOk ? 'Aucun paiement en ligne. Réponse par SMS ' + delai + '.' : 'Renseignez votre nom, votre téléphone et un créneau.',
-      onOrderSubmit:(e) => {
+      onOrderSubmit:async (e) => {
         e.preventDefault();
-        if (!formOk) { this.flash('Il manque une information'); return; }
-        this.setState({ ref:'L-' + (2600 + Math.floor(Math.random() * 99)) });
-        this.nav('confirm');
+        if (!formOk || s.sending || this._catalogueUnavailable) { this.flash('Informations manquantes ou menu indisponible'); return; }
+        const body = {
+          name:s.form.nom.trim(),phone:s.form.tel.trim(),email:s.form.email.trim(),note:s.form.note.trim(),
+          consent:s.form.ok, pickupDate:jourObj.dateRaw, pickupTime:creneauObj.label,
+          items:s.cart.map(l=>({platId:l.platId,variantId:l.variantId,conservation:l.conservation,qty:l.qty}))
+        };
+        const signature=JSON.stringify(body);
+        if (!this._lastOrder || this._lastOrder.signature!==signature) this._lastOrder={signature,key:crypto.randomUUID()};
+        body.requestKey=this._lastOrder.key;
+        this.setState({sending:true,formError:''});
+        try {
+          const result=await window.LaureOrders.submit(body);
+          if (!result || !result.orderId) throw new Error('Référence de réservation absente');
+          this.setState({ref:result.orderId,sending:false,formError:''});
+          this.nav('confirm');
+        } catch(error) {
+          this.setState({sending:false,formError:error.message||'La réservation n’a pas été envoyée.'});
+        }
       },
-      onSignup:(e) => { e.preventDefault(); this.flash("C'est noté, vous recevrez le menu lundi"); },
+      onSignup:(e) => { e.preventDefault(); this.flash("L'inscription à la liste de diffusion n'est pas encore ouverte. Contactez Laure directement."); },
 
       confirmPrenom: (s.form.nom.trim().split(' ')[0] || 'Camille'),
       confirmLines: cartLines, confirmTotal: this.euro(totalNum), orderRef: s.ref,

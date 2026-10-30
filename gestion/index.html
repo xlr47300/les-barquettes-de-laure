@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4E6141"><meta name="robots" content="noindex,nofollow">
+  <title>Gestion · Les Barquettes de Laure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Petrona:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/gestion/style.css">
+  <script type="module" src="/gestion/app.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand"><img src="/uploads/Logo%20les%20barquettes%20de%20Laure.png" alt="Logo Les Barquettes de Laure"><div><b>Les Barquettes<br>de Laure</b><span>Espace de gestion</span></div></div>
+    <nav id="nav" aria-label="Navigation"><button type="button" data-page="accueil" class="active">⌂ <span>Accueil</span></button><button type="button" data-page="commandes">▤ <span>Commandes</span></button><button type="button" data-page="cuisine">♨ <span>Cuisine</span></button><button type="button" data-page="clients">♧ <span>Clients</span></button><button type="button" data-page="catalogue">◫ <span>Catalogue</span></button><button type="button" data-page="retraits">◷ <span>Retraits</span></button></nav>
+    <a class="public-link" href="/" target="_blank" rel="noopener">Voir le site public ↗</a>
+  </aside>
+  <div class="content">
+    <header class="topbar"><div><small>ESPACE PRIVÉ</small><h1 id="page-title">Tableau de bord</h1></div><div class="actions"><button class="btn secondary" id="refresh" type="button">Actualiser</button><button class="btn primary" id="add-order" type="button">+ Commande</button></div></header>
+    <main id="main" aria-live="polite"><div class="loading">Chargement des commandes et du catalogue…</div></main>
+    <footer>Les Barquettes de Laure · Données privées · <span id="updated"></span></footer>
+  </div>
+</div>
+<nav class="mobile-nav" aria-label="Navigation mobile"><button type="button" data-page="accueil">⌂<span>Accueil</span></button><button type="button" data-page="commandes">▤<span>Commandes</span></button><button type="button" data-page="cuisine">♨<span>Cuisine</span></button><button type="button" data-page="clients">♧<span>Clients</span></button><button type="button" data-page="catalogue">◫<span>Plats</span></button></nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="manual-modal" aria-labelledby="manual-title">
+  <form id="manual-form" class="dialog-body">
+    <div class="dialog-head"><h2 id="manual-title">Nouvelle commande</h2><button class="close" type="button" id="close-manual" aria-label="Fermer">×</button></div>
+    <p>Enregistrer une commande reçue par téléphone, message ou en direct.</p>
+    <div class="field-grid"><label>Nom du client<input name="name" required minlength="3" maxlength="100" autocomplete="name"></label><label>Téléphone<input name="phone" required minlength="9" autocomplete="tel"></label><label>Email (facultatif)<input name="email" type="email" autocomplete="email"></label><label>Créneau de retrait<select name="pickupSlot" id="manual-slot" required></select></label></div>
+    <div class="row space"><b>Plats commandés</b><button class="btn secondary" id="add-line" type="button">+ Ajouter un plat</button></div><div id="manual-lines"></div>
+    <label>Note (facultative)<textarea name="note" rows="2" maxlength="700"></textarea></label>
+    <div class="dialog-actions"><button type="button" class="btn secondary" id="cancel-manual">Annuler</button><button type="submit" class="btn primary">Enregistrer la demande</button></div>
+  </form>
+</dialog>
+<dialog id="slot-modal" aria-labelledby="slot-title">
+<form id="slot-form" class="dialog-body"><div class="dialog-head"><h2 id="slot-title">Ouvrir un retrait</h2><button class="close" type="button" data-close="slot-modal">×</button></div>
+<div class="field-grid"><label>Date<input type="date" name="date" required></label><label>Heure (ex. 17h30)<input name="time" pattern="([01]?[0-9]|2[0-3])h[0-5][0-9]" placeholder="17h30" required></label><label>Nombre de commandes possibles<input type="number" name="available" min="1" max="1000" value="5" required></label></div>
+<div class="dialog-actions"><button type="button" class="btn secondary" data-close="slot-modal">Annuler</button><button type="submit" class="btn primary">Créer le créneau</button></div></form></dialog>
+<dialog id="product-modal" aria-labelledby="product-title">
+<form id="product-form" class="dialog-body"><input type="hidden" name="editId" value=""><div class="dialog-head"><h2 id="product-title">Créer une fiche plat</h2><button class="close" type="button" data-close="product-modal">×</button></div>
+<p>Le nouveau plat sera enregistré en brouillon non publié. Vérifier les informations de conservation et d'étiquetage avant de l'activer.</p>
+<label>Nom du plat<input name="name" required minlength="3" maxlength="100"></label>
+<label>Description courte<textarea name="description" rows="2" required maxlength="300"></textarea></label>
+<label>Ingrédients<textarea name="ingredients" rows="2" required maxlength="800"></textarea></label>
+<label>Allergènes (écrire « Aucun identifié » si applicable après vérification)<textarea name="allergens" rows="2" required maxlength="500"></textarea></label>
+<label>DLC / conditions de conservation (informations validées)<textarea name="dlc" rows="2" maxlength="300" placeholder="À renseigner après validation"></textarea></label>
+<label>Réchauffage (facultatif)<textarea name="reheating" rows="2" maxlength="400"></textarea></label>
+<div class="field-grid"><label>État de conservation<select name="conservation"><option>Frais</option><option>Sous vide</option><option>Surgelé</option></select></label><label>Prix individuel (€)<input type="number" step="0.01" min="0.01" max="1000" name="price" required></label><label>Stock initial<input type="number" min="0" max="9999" name="stock" value="0" required></label><label>Lien de la photo<input name="image" type="url" placeholder="https://..."></label></div>
+<div class="dialog-actions"><button type="button" class="btn secondary" data-close="product-modal">Annuler</button><button type="submit" class="btn primary" id="save-product-details">Enregistrer le brouillon</button></div></form></dialog>
+</body>
+</html>
