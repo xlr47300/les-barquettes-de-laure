@@ -37,7 +37,8 @@
 </dialog>
 <dialog id="slot-modal" aria-labelledby="slot-title">
 <form id="slot-form" class="dialog-body"><div class="dialog-head"><h2 id="slot-title">Ouvrir un retrait</h2><button class="close" type="button" data-close="slot-modal">×</button></div>
-<div class="field-grid"><label>Date<input type="date" name="date" required></label><label>Heure (ex. 17h30)<input name="time" pattern="([01]?[0-9]|2[0-3])h[0-5][0-9]" placeholder="17h30" required></label><label>Nombre de commandes possibles<input type="number" name="available" min="1" max="1000" value="5" required></label></div>
+<p>Choisissez la date dans le calendrier et l'heure avec le sélecteur. Aucune saisie au format « 17h30 » n'est nécessaire.</p>
+<div class="field-grid"><label>Date de retrait<input type="date" name="date" required></label><label>Heure de retrait<input type="time" name="time" min="06:00" max="23:45" step="900" value="17:30" required></label><label>Nombre de commandes possibles<input type="number" name="available" min="1" max="1000" value="5" required></label></div>
 <div class="dialog-actions"><button type="button" class="btn secondary" data-close="slot-modal">Annuler</button><button type="submit" class="btn primary">Créer le créneau</button></div></form></dialog>
 <dialog id="product-modal" aria-labelledby="product-title">
 <form id="product-form" class="dialog-body"><input type="hidden" name="editId" value=""><div class="dialog-head"><h2 id="product-title">Créer une fiche plat</h2><button class="close" type="button" data-close="product-modal">×</button></div>

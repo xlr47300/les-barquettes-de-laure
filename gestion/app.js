@@ -90,9 +90,15 @@ function renderCatalogue(){
   const ps=state.data?.products||[];
   return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les plats</h2><button type="button" id="new-product" class="btn primary">+ Nouveau plat</button></div><div class="notice">Modification directe des stocks et prix du Google Sheets « Catalogue ». Les informations du site public se mettent à jour à son prochain chargement.</div><div class="catalogue-grid">${ps.map(p=>`<article class="product" data-product="${esc(p.id)}"><div class="head"><h3>${esc(p.name)}</h3><label class="row"><input type="checkbox" class="product-active" ${p.active?'checked':''}> <span class="short">Publié</span></label></div><div class="row space" style="margin-top:9px"><span class="muted short">${esc(p.conservation)} · ${p.dlc?'DLC renseignée':'DLC à renseigner'}</span><button type="button" class="btn secondary product-edit">Modifier la fiche</button></div>${p.variants.map(v=>`<div class="variant" data-variant="${esc(v.id)}"><div><b class="short">${esc(v.label)}</b><label class="row"><input type="checkbox" class="variant-active" style="width:16px;min-height:16px" ${v.active?'checked':''}> Format actif</label></div><label>Prix (€)<input type="number" class="price" min="0" max="1000" step="0.01" value="${v.price}"></label><label>Stock<input type="number" class="stock" min="0" max="9999" step="1" value="${v.stock}"></label><button type="button" class="btn secondary product-save">Enregistrer</button></div>`).join('')}</article>`).join('')}</div>`;
 }
+function slotCards(slots){
+  return `<div class="slot-grid">${slots.map(s=>`<article class="slot-card" data-date="${esc(s.date)}" data-time="${esc(s.time)}"><b>${esc(shortDate(s.date))}</b><p>${esc(s.time)}</p><label>Places disponibles<input class="places" type="number" min="0" max="1000" step="1" value="${s.available}"></label><label class="row"><input type="checkbox" class="slot-active" style="width:17px;min-height:17px" ${s.active?'checked':''}> Créneau ouvert</label><button class="btn secondary slot-save" type="button">Enregistrer</button></article>`).join('')}</div>`;
+}
 function renderRetraits(){
-  const slots=(state.data?.slots||[]).sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
-  return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les créneaux</h2><button type="button" id="new-slot" class="btn primary">+ Nouveau créneau</button></div><div class="notice">Le nombre de places correspond aux commandes pouvant encore être prises sur ce créneau, et non au nombre de barquettes.</div><div class="slot-grid">${slots.map(s=>`<article class="slot-card" data-date="${esc(s.date)}" data-time="${esc(s.time)}"><b>${esc(shortDate(s.date))}</b><p>${esc(s.time)}</p><label>Places disponibles<input class="places" type="number" min="0" max="1000" step="1" value="${s.available}"></label><label class="row"><input type="checkbox" class="slot-active" style="width:17px;min-height:17px" ${s.active?'checked':''}> Créneau ouvert</label><button class="btn secondary slot-save" type="button">Enregistrer</button></article>`).join('')}</div>`;
+  const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
+  const slots=[...(state.data?.slots||[])].sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+  const future=slots.filter(s=>s.date>=today);
+  const previous=slots.filter(s=>s.date<today).reverse();
+  return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les créneaux</h2><button type="button" id="new-slot" class="btn primary">+ Nouveau créneau</button></div><div class="notice">Le nombre de places correspond aux commandes possibles, et non au nombre de barquettes. Les créneaux passés restent dans l'historique.</div>${label('Retraits à venir',future.length+' créneau(x)')}${future.length?slotCards(future):'<div class="empty">Aucun retrait programmé. Cliquez sur « Nouveau créneau ».</div>'}${previous.length?`<details class="slot-archive"><summary>Historique des retraits (${previous.length})</summary>${slotCards(previous)}</details>`:''}`;
 }
 const pages={accueil:['Tableau de bord',renderHome],commandes:['Les commandes',renderOrders],cuisine:['Préparation en cuisine',renderKitchen],clients:['Fichier clients',renderClients],catalogue:['Catalogue des plats',renderCatalogue],retraits:['Créneaux de retrait',renderRetraits]};
 function render(){
@@ -122,7 +128,12 @@ document.addEventListener('click',async e=>{
   const closer=e.target.closest('[data-close]');if(closer){document.getElementById(closer.dataset.close)?.close();return;}
   if(e.target.closest('#new-product')){const form=$('#product-form');form.reset();form.elements.name.readOnly=false;form.elements.price.disabled=false;form.elements.stock.disabled=false;form.elements.editId.value='';$('#product-title').textContent='Créer une fiche plat';$('#save-product-details').textContent='Enregistrer le brouillon';$('#product-modal').showModal();return;}
   const edit=e.target.closest('.product-edit');if(edit){const id=edit.closest('[data-product]').dataset.product;const product=(state.data?.products||[]).find(p=>p.id===id);if(!product)return;const form=$('#product-form');form.reset();form.elements.editId.value=id;for(const key of ['description','ingredients','allergens','dlc','reheating','image','conservation'])form.elements[key].value=product[key]||'';form.elements.name.value=product.name;form.elements.name.readOnly=true;form.elements.price.disabled=true;form.elements.stock.disabled=true;form.elements.price.value=(product.variants.find(v=>v.id==='indiv')||{}).price||0;form.elements.stock.value=(product.variants.find(v=>v.id==='indiv')||{}).stock||0;$('#product-title').textContent='Modifier la fiche : '+product.name;$('#save-product-details').textContent='Enregistrer la fiche';$('#product-modal').showModal();return;}
-  if(e.target.closest('#new-slot')){$('#slot-form').reset();$('#slot-modal').showModal();return;}
+  if(e.target.closest('#new-slot')){
+    const form=$('#slot-form');form.reset();
+    form.elements.date.min=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
+    form.elements.time.value='17:30';
+    $('#slot-modal').showModal();return;
+  }
   if(e.target.closest('#refresh')){await refresh();return;}
   if(e.target.closest('#add-order')){openManual();return;}
   if(e.target.closest('#close-manual')||e.target.closest('#cancel-manual')){$('#manual-modal').close();return;}
@@ -153,7 +164,10 @@ refresh(true);
 $('#slot-form').addEventListener('submit',async e=>{
   e.preventDefault();
   const data=new FormData(e.currentTarget);
-  const payload={action:'slotCreate',date:data.get('date'),time:String(data.get('time')||'').trim(),available:Number(data.get('available'))};
+  const time=String(data.get('time')||'').trim();
+  const match=time.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if(!match){notice('Choisissez une heure valide dans le sélecteur.');return;}
+  const payload={action:'slotCreate',date:data.get('date'),time:`${match[1]}h${match[2]}`,available:Number(data.get('available'))};
   if(await mutate(payload)){$('#slot-modal').close();nav('retraits');}
 });
 $('#product-form').addEventListener('submit',async e=>{

@@ -5,7 +5,6 @@ window.SiteData = (() => {
   const tabs = {
     SITE: "1098918812",
     PLATS: "2056572397",
-    FORMULES: "1673314679",
     "CRÉNEAUX": "1555121259",
   };
 
@@ -52,6 +51,14 @@ window.SiteData = (() => {
     if (!response.ok) throw new Error(`Lecture impossible pour l'onglet ${sheetName}`);
     const rows = parseCsv(await response.text());
     const headers = rows.shift() || [];
+    const required = {
+      SITE: ["Section", "Élément", "Valeur"],
+      PLATS: ["Nom du plat", "Actif", "Format 1 personne actif"],
+      "CRÉNEAUX": ["Date", "Heure", "Actif", "Places disponibles"]
+    }[sheetName] || [];
+    if (required.some((name) => !headers.includes(name))) {
+      throw new Error(`En-têtes du catalogue incorrects pour l'onglet ${sheetName}`);
+    }
     return rows.map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""])));
   }
 
@@ -190,7 +197,7 @@ window.SiteData = (() => {
       { n: "4", icon: "main", titre: "Vous récupérez", texte: "Vous passez au créneau choisi, vous payez sur place." },
     ];
     return {
-      plats: buildPlats(source.PLATS, site.settings["stock.seuil"]), formules: buildFormules(source.FORMULES),
+      plats: buildPlats(source.PLATS, site.settings["stock.seuil"]), formules: [], // Formules désactivées : onglet non requis
       moments: site.moments, etapes, engagements: site.engagements, jours: buildJours(source["CRÉNEAUX"]),
       settings: site.settings, textes: site.textes,
     };

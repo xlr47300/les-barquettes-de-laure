@@ -314,27 +314,40 @@ function editProduct_(input){return withLock_(()=>{
   const detailFields={description:['Description courte',300],ingredients:['Ingrédients',800],allergens:['Allergènes',500],
     dlc:['DLC / conservation',300],reheating:['Réchauffage',400],image:['Photo principale URL Google Drive',400],
     conservation:['État actuel',50]};
-  if(input.details && typeof input.details==='object'){
-    const fields=input.details;
-    if(fields.image&&!/^https:\/\//i.test(clean_(fields.image,400)))fail_('Lien image incorrect');
-    if(fields.conservation&&!['Frais','Sous vide','Surgelé'].includes(clean_(fields.conservation,50)))fail_('Conservation incorrecte');
-    for(const [key,[col,max]] of Object.entries(detailFields)){
-      if(Object.prototype.hasOwnProperty.call(fields,key))updateCell_(data,p._row,col,safeCell_(fields[key],max));
-    }
+  const pending=[];
+  const fields=input.details && typeof input.details==='object' && !Array.isArray(input.details)?input.details:{};
+  if(fields.image&&!/^https:\/\//i.test(clean_(fields.image,400)))fail_('Lien image incorrect');
+  if(fields.conservation&&!['Frais','Sous vide','Surgelé'].includes(clean_(fields.conservation,50)))fail_('Conservation incorrecte');
+  for(const [key,[col,max]] of Object.entries(detailFields)){
+    if(Object.prototype.hasOwnProperty.call(fields,key))pending.push([col,safeCell_(fields[key],max)]);
   }
-  if((input.active===true || (yes_(p.Actif)&&input.active!==false)) && (!clean_(input.details?.ingredients??p['Ingrédients'],800)||
-     !clean_(input.details?.allergens??p['Allergènes'],500)||
-     !clean_(input.details?.dlc??p['DLC / conservation'],300)))
+  // Valider toute la fiche avant la première écriture : aucune modification partielle
+  // ne doit être causée par une règle de publication, de prix ou de stock.
+  const willBeActive=input.active===true||(yes_(p.Actif)&&input.active!==false);
+  if(willBeActive && (!clean_(fields.ingredients??p['Ingrédients'],800)||
+      !clean_(fields.allergens??p['Allergènes'],500)||
+      !clean_(fields.dlc??p['DLC / conservation'],300)))
     fail_('Compléter ingrédients, allergènes et DLC/conservation avant publication');
-  if(typeof input.active==='boolean')updateCell_(data,p._row,'Actif',input.active?'Oui':'Non');
+  if(typeof input.active==='boolean')pending.push(['Actif',input.active?'Oui':'Non']);
   const variant=clean_(input.variant,20);
   if(variant){
     if(!LAURE.variants[variant])fail_('Format inconnu');
     const [on,price,stock]=LAURE.variants[variant];
-    if(input.price!==undefined){const v=Number(input.price);if(!Number.isFinite(v)||v<0||v>1000)fail_('Prix incorrect');updateCell_(data,p._row,price,Math.round(v*100)/100);}
-    if(input.stock!==undefined){const v=Number(input.stock);if(!Number.isInteger(v)||v<0||v>9999)fail_('Stock incorrect');updateCell_(data,p._row,stock,v);}
-    if(typeof input.variantActive==='boolean')updateCell_(data,p._row,on,input.variantActive?'Oui':'Non');
+    if(input.price!==undefined){
+      const v=Number(input.price);
+      if(!Number.isFinite(v)||v<0||v>1000)fail_('Prix incorrect');
+      pending.push([price,Math.round(v*100)/100]);
+    }
+    if(input.stock!==undefined){
+      const v=Number(input.stock);
+      if(!Number.isInteger(v)||v<0||v>9999)fail_('Stock incorrect');
+      pending.push([stock,v]);
+    }
+    if(typeof input.variantActive==='boolean')pending.push([on,input.variantActive?'Oui':'Non']);
   }
+  // S'assurer que toutes les colonnes existent avant de modifier la feuille.
+  pending.forEach(([column])=>idx_(data,column));
+  pending.forEach(([column,value])=>updateCell_(data,p._row,column,value));
   return {updated:true};
 });}
 function editSlot_(input){return withLock_(()=>{

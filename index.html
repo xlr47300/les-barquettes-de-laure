@@ -24,6 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
+  button:disabled { opacity:.58;cursor:not-allowed!important;box-shadow:none!important; }
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: #EFE6DA; color: #2E2723; font-family: 'Work Sans', system-ui, sans-serif; text-wrap: pretty; }
   * { box-sizing: border-box; }
@@ -63,7 +64,6 @@
             <button onClick="{{ goPlats }}" style="background:none;border:0;padding:9px 12px;border-radius:9px;font:400 14px/1 'Work Sans';color:#584C43;cursor:pointer" style-hover="background:#F2E7D9;color:#2E2723">Les plats</button>
             <button onClick="{{ goComment }}" style="background:none;border:0;padding:9px 12px;border-radius:9px;font:400 14px/1 'Work Sans';color:#584C43;cursor:pointer" style-hover="background:#F2E7D9;color:#2E2723">Comment ça marche</button>
             <button onClick="{{ goLaure }}" style="background:none;border:0;padding:9px 12px;border-radius:9px;font:400 14px/1 'Work Sans';color:#584C43;cursor:pointer" style-hover="background:#F2E7D9;color:#2E2723">Laure</button>
-            <button onClick="{{ goFaq }}" style="background:none;border:0;padding:9px 12px;border-radius:9px;font:400 14px/1 'Work Sans';color:#584C43;cursor:pointer" style-hover="background:#F2E7D9;color:#2E2723">Questions pratiques</button>
           </nav>
           <div style="display:flex;align-items:center;gap:10px">
             <button onClick="{{ openDrawer }}" title="Panier" style="position:relative;width:46px;height:46px;border-radius:13px;border:1px solid rgba(138,75,42,.22);background:#FBF6EE;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#F2E7D9">
@@ -88,6 +88,12 @@
           <span style="{{ cartDotStyle }}">{{ cartCount }}</span>
         </button>
       </header>
+    </sc-if>
+
+    <sc-if value="{{ ordersClosed }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="max-width:1240px;margin:14px auto 0;padding:14px 18px;border-radius:14px;background:#F4EADC;color:#7A5238;font:500 14px/1.5 'Work Sans'">
+        Le catalogue reste consultable, mais les commandes sont fermées pour le moment : aucun créneau de retrait n'est disponible.
+      </div>
     </sc-if>
 
     <!-- ══ ACCUEIL ══ -->
@@ -157,7 +163,7 @@
                     <span style="font:600 18px/1 'Petrona',serif;color:#2E2723">{{ p.prixLabel }}</span>
                     <span style="{{ p.dispoStyle }}">{{ p.dispoLabel }}</span>
                   </div>
-                  <button onClick="{{ p.add }}" style="display:flex;align-items:center;gap:7px;min-height:44px;padding:12px 17px;border-radius:999px;border:0;background:#2E2723;color:#FBF6EE;font:500 13.5px/1 'Work Sans';cursor:pointer" style-hover="background:#C9613F">
+                  <button onClick="{{ p.add }}" disabled="{{ p.ctaDisabled }}" style="display:flex;align-items:center;gap:7px;min-height:44px;padding:12px 17px;border-radius:999px;border:0;background:#2E2723;color:#FBF6EE;font:500 13.5px/1 'Work Sans';cursor:pointer" style-hover="background:#C9613F">
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#FBF6EE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6v12 M6 12h12"></path></svg>{{ p.ctaLabel }}
                   </button>
                 </div>
@@ -263,7 +269,7 @@
                       <span style="font:400 11.5px/1 'Work Sans';color:#8A4B2A;background:#F4EADC;padding:6px 9px;border-radius:7px">Retrait {{ p.retrait }}</span>
                       <span style="font:400 11.5px/1 'Work Sans';color:#B24A26;background:#FBE3DA;padding:6px 9px;border-radius:7px">Avant {{ p.limite }}</span>
                     </div>
-                    <button onClick="{{ p.add }}" style="align-self:flex-start;margin-top:4px;min-height:44px;padding:12px 18px;border-radius:999px;border:0;background:#2E2723;color:#FBF6EE;font:500 13px/1 'Work Sans';cursor:pointer" style-hover="background:#C9613F">Réserver</button>
+                    <button onClick="{{ p.add }}" disabled="{{ p.ctaDisabled }}" style="align-self:flex-start;margin-top:4px;min-height:44px;padding:12px 18px;border-radius:999px;border:0;background:#2E2723;color:#FBF6EE;font:500 13px/1 'Work Sans';cursor:pointer" style-hover="background:#C9613F">{{ p.ctaLabel }}</button>
                   </div>
                 </article>
               </sc-for>
@@ -271,26 +277,23 @@
           </div>
           <div style="flex:1 1 280px;min-width:250px;background:#FBF6EE;border:1px solid rgba(138,75,42,.13);border-radius:20px;padding:20px">
             <h3 style="margin:0 0 4px;font:600 17px/1.2 'Petrona',serif;color:#2E2723">Prochains retraits</h3>
-            <p style="margin:0 0 14px;font:300 12.5px/1.5 'Work Sans';color:#6B5D53">Mercredi et vendredi 17h–19h, samedi 10h–12h.</p>
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px">
-              <sc-for list="{{ joursSemaineEntetes }}" as="d" hint-placeholder-count="7">
-                <span style="text-align:center;font:500 10px/1 'Work Sans';letter-spacing:.06em;text-transform:uppercase;color:#A9998C;padding:4px 0">{{ d }}</span>
+            <p style="margin:0 0 14px;font:300 12.5px/1.5 'Work Sans';color:#6B5D53">Les jours et heures réellement proposés par Laure.</p>
+            <sc-if value="{{ ordersClosed }}" hint-placeholder-val="{{ false }}">
+              <p style="padding:15px;border-radius:12px;background:#F4EADC;color:#7A5238;font:400 13px/1.5 'Work Sans'">Aucun retrait disponible actuellement. Revenez consulter le prochain menu.</p>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ retraitsAccueil }}" as="r" hint-placeholder-count="3">
+                <div style="border-bottom:1px solid rgba(138,75,42,.12);padding:10px 0;display:flex;flex-direction:column;gap:4px">
+                  <strong style="font:600 15px/1.25 'Petrona',serif;color:#2E2723">{{ r.date }}</strong>
+                  <span style="font:400 13px/1.4 'Work Sans';color:#584C43">{{ r.horaires }}</span>
+                </div>
               </sc-for>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
-              <sc-for list="{{ calendrier }}" as="c" hint-placeholder-count="21">
-                <span style="{{ c.style }}">{{ c.jour }}</span>
-              </sc-for>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid rgba(138,75,42,.12)">
-              <span style="display:flex;align-items:center;gap:8px;font:300 12px/1.3 'Work Sans';color:#584C43"><span style="width:10px;height:10px;border-radius:3px;background:#C9613F;flex:none"></span>Retrait possible</span>
-              <span style="display:flex;align-items:center;gap:8px;font:300 12px/1.3 'Work Sans';color:#584C43"><span style="width:10px;height:10px;border-radius:3px;background:#EAEFE2;border:1px solid #A8B795;flex:none"></span>Date limite de réservation</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section style="{{ sectionStyle }}">
+      <section style="{{ sectionStyle }}" id="laure">
         <div style="{{ laureWrap }}">
           <div style="{{ laurePhoto }}">
             <div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 12px)"></div>
@@ -383,7 +386,7 @@
                   <span style="font:600 18px/1 'Petrona',serif;color:#2E2723">{{ p.prixLabel }}</span>
                   <span style="{{ p.dispoStyle }}">{{ p.dispoLabel }}</span>
                 </div>
-                <button onClick="{{ p.add }}" style="display:flex;align-items:center;gap:7px;min-height:44px;padding:12px 17px;border-radius:999px;border:0;background:#2E2723;color:#FBF6EE;font:500 13.5px/1 'Work Sans';cursor:pointer" style-hover="background:#C9613F">
+                <button onClick="{{ p.add }}" disabled="{{ p.ctaDisabled }}" style="display:flex;align-items:center;gap:7px;min-height:44px;padding:12px 17px;border-radius:999px;border:0;background:#2E2723;color:#FBF6EE;font:500 13.5px/1 'Work Sans';cursor:pointer" style-hover="background:#C9613F">
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#FBF6EE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6v12 M6 12h12"></path></svg>{{ p.ctaLabel }}
                 </button>
               </div>
@@ -462,7 +465,7 @@
               <span style="min-width:34px;text-align:center;font:500 15px/1 'Work Sans';color:#2E2723">{{ ficheQty }}</span>
               <button onClick="{{ fichePlus }}" style="width:44px;height:44px;border-radius:999px;border:0;background:transparent;font:400 20px/1 'Work Sans';color:#8A4B2A;cursor:pointer" style-hover="background:#F2E7D9">+</button>
             </div>
-            <button onClick="{{ ficheAdd }}" style="flex:1 1 190px;min-height:56px;border-radius:999px;border:0;background:#C9613F;color:#FBF6EE;font:500 15.5px/1 'Work Sans';cursor:pointer;box-shadow:0 5px 16px rgba(201,97,63,.28)" style-hover="background:#B34F30">{{ ficheAddLabel }}</button>
+            <button onClick="{{ ficheAdd }}" disabled="{{ ficheAddDisabled }}" style="flex:1 1 190px;min-height:56px;border-radius:999px;border:0;background:#C9613F;color:#FBF6EE;font:500 15.5px/1 'Work Sans';cursor:pointer;box-shadow:0 5px 16px rgba(201,97,63,.28)" style-hover="background:#B34F30">{{ ficheAddLabel }}</button>
           </div>
 
           <div style="display:flex;flex-direction:column;background:#FBF6EE;border:1px solid rgba(138,75,42,.13);border-radius:18px;overflow:hidden">
@@ -539,7 +542,7 @@
             <span style="font:600 26px/1 'Petrona',serif;color:#2E2723">{{ cartTotal }}</span>
           </div>
           <span style="font:300 12.5px/1.55 'Work Sans';color:#6B5D53">Paiement sur place au moment du retrait, en espèces ou par carte.</span>
-          <button onClick="{{ goCommande }}" style="min-height:56px;border-radius:999px;border:0;background:#C9613F;color:#FBF6EE;font:500 16px/1 'Work Sans';cursor:pointer;box-shadow:0 6px 18px rgba(201,97,63,.3)" style-hover="background:#B34F30">Choisir mon créneau</button>
+          <button onClick="{{ goCommande }}" disabled="{{ ordersClosed }}" style="min-height:56px;border-radius:999px;border:0;background:#C9613F;color:#FBF6EE;font:500 16px/1 'Work Sans';cursor:pointer;box-shadow:0 6px 18px rgba(201,97,63,.3)" style-hover="background:#B34F30">Choisir mon créneau</button>
           <span style="font:300 12px/1.5 'Work Sans';color:#8A9078;text-align:center">Rien n'est débité en ligne. Laure confirme avant tout.</span>
         </aside>
       </div>
@@ -833,7 +836,7 @@
         </div>
 
         <div style="padding:16px 20px 20px;border-top:1px solid rgba(138,75,42,.13);display:flex;flex-direction:column;gap:10px;background:#FBF6EE">
-          <button onClick="{{ sheetAdd }}" style="min-height:56px;border-radius:999px;border:0;background:#C9613F;color:#FBF6EE;font:500 15.5px/1 'Work Sans';cursor:pointer;box-shadow:0 5px 16px rgba(201,97,63,.28)" style-hover="background:#B34F30">{{ sheet.ctaLabel }}</button>
+          <button onClick="{{ sheetAdd }}" disabled="{{ ordersClosed }}" style="min-height:56px;border-radius:999px;border:0;background:#C9613F;color:#FBF6EE;font:500 15.5px/1 'Work Sans';cursor:pointer;box-shadow:0 5px 16px rgba(201,97,63,.28)" style-hover="background:#B34F30">{{ sheet.ctaLabel }}</button>
           <span style="font:300 11.5px/1.5 'Work Sans';color:#8A9078;text-align:center">Aucun paiement en ligne. Laure confirme votre réservation.</span>
         </div>
       </div>
@@ -1028,7 +1031,6 @@ let JOURS = [
   { id:'sam', jour:'Samedi', date:'15 août', plage:'10h – 12h', creneaux:[{ id:'s1', label:'10h00', restant:5 },{ id:'s2', label:'10h30', restant:2 },{ id:'s3', label:'11h00', restant:4 },{ id:'s4', label:'11h30', restant:2 }] }
 ];
 
-const CALENDRIER = { debut:10, fin:23, retraits:[12,14,15,19,21,22], limites:[10,13,17,20] };
 /* ═══════════ DONNÉES FICTIVES — FIN ═══════════ */
 
 const BADGE_STYLES = {
@@ -1072,9 +1074,13 @@ class Component extends DCLogic {
   componentWillUnmount() { window.removeEventListener('resize', this._onResize); clearTimeout(this._t); }
 
   loadGoogleSheet() {
-    if (!window.SiteData) return;
+    this._catalogueUnavailable = true;
+    if (!window.SiteData) {
+      this.showCatalogueError(new Error('Script du catalogue absent'));
+      return;
+    }
     window.SiteData.load().then((data) => {
-      if (!data.plats.length || !data.jours.length) throw new Error('Catalogue incomplet');
+      if (!data.plats.length) throw new Error('Aucun plat publié dans le catalogue');
       PLATS = data.plats;
       FORMULES = []; // Formules masquées en V1 : composants / stock non suivis.
       MOMENTS = data.moments;
@@ -1083,23 +1089,32 @@ class Component extends DCLogic {
       JOURS = data.jours;
       this._sheetSettings = data.settings;
       this._sheetTextes = data.textes;
-      const firstDay = JOURS[0];
-      const availableSlot = firstDay.creneaux.find((slot) => slot.restant > 0) || firstDay.creneaux[0];
+      this._catalogueUnavailable = false;
+      const firstDay = JOURS.find((day) => day.creneaux.some((slot) => slot.restant > 0)) || JOURS[0];
+      const preferredDay = JOURS.find((day) => day.id === this.state.jour && day.creneaux.some((slot) => slot.restant > 0)) || firstDay;
+      const availableSlot = preferredDay?.creneaux.find((slot) => slot.restant > 0);
       this.setState({
         productId: PLATS.some((plat) => plat.id === this.state.productId) ? this.state.productId : PLATS[0].id,
-        jour: JOURS.some((day) => day.id === this.state.jour) ? this.state.jour : firstDay.id,
-        creneau: availableSlot ? availableSlot.id : '',
+        jour: preferredDay?.id || '',
+        creneau: availableSlot?.id || '',
         dataVersion: Date.now()
       });
       this.applySheetCopy();
       document.getElementById('catalogue-status')?.remove();
-    }).catch(() => {
-      this._catalogueUnavailable = true;
-      const status = document.getElementById('catalogue-text');
-      if (status) status.textContent = 'Le menu est temporairement indisponible. Aucune commande ne peut être passée.';
-      const retry = document.getElementById('catalogue-retry');
-      if (retry) retry.style.display = 'inline-block';
-    });
+    }).catch((error) => this.showCatalogueError(error));
+  }
+
+  showCatalogueError(error) {
+    this._catalogueUnavailable = true;
+    console.error('Catalogue public :', error);
+    const status = document.getElementById('catalogue-text');
+    if (status) status.textContent = 'Le catalogue ne peut pas être chargé actuellement. Aucune commande ne peut être passée.';
+    const retry = document.getElementById('catalogue-retry');
+    if (retry) retry.style.display = 'inline-block';
+  }
+
+  ordersAvailable() {
+    return !this._catalogueUnavailable && JOURS.some((day) => day.creneaux.some((slot) => slot.restant > 0));
   }
 
   applySheetCopy() {
@@ -1160,10 +1175,19 @@ class Component extends DCLogic {
   icon(name) { return ICONS[name] || ICONS.barquette; }
 
   nav(route) {
+    if (route === 'commande' && !this.ordersAvailable()) {
+      this.flash('Les commandes sont fermées : aucun créneau de retrait disponible.');
+      return;
+    }
     this.setState({ route, drawerOpen:false, sheetId:null });
     const sc = this._sc;
     if (sc) sc.scrollTop = 0;
     if (typeof window !== 'undefined') window.scrollTo(0, 0);
+  }
+
+  scrollHomeSection(id) {
+    this.nav('home');
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}), 80);
   }
 
   flash(msg) {
@@ -1183,6 +1207,7 @@ class Component extends DCLogic {
   }
 
   addToCart(platId, variantId, conservation, qty) {
+    if (!this.ordersAvailable()) { this.flash('Commandes fermées pour le moment.'); return; }
     const p = PLATS.find(x => x.id === platId);
     const v = p && (p.variants.find(x => x.id === variantId) || p.variants[0]);
     const available = v ? this.availableFor(platId, v.id) : 0;
@@ -1198,6 +1223,7 @@ class Component extends DCLogic {
   }
 
   addFormule(f) {
+    if (!this.ordersAvailable()) { this.flash('Commandes fermées pour le moment.'); return; }
     const cart = this.state.cart.slice();
     const i = cart.findIndex(l => l.platId === 'formule-' + f.id);
     if (i >= 0) cart[i] = { ...cart[i], qty: cart[i].qty + 1 };
@@ -1216,6 +1242,7 @@ class Component extends DCLogic {
   }
 
   openSheet(id) {
+    if (!this.ordersAvailable()) { this.flash('Commandes fermées pour le moment.'); return; }
     const p = PLATS.find(x => x.id === id);
     const variant = p && (p.variants.find(v => this.availableFor(p.id, v.id) > 0) || p.variants[0]);
     if (!p || !variant || this.availableFor(p.id, variant.id) <= 0) { this.flash('Ce plat est épuisé'); return; }
@@ -1265,7 +1292,8 @@ class Component extends DCLogic {
   mapPlat(p) {
     const stock = this._sheetSettings?.['commande.afficher_stock'] ? this._sheetSettings['commande.afficher_stock'] === 'Oui' : this.props.afficherStock !== false;
     const v0 = p.variants.find(v => (v.stock == null ? p.reste : v.stock) > 0) || p.variants[0];
-    const dispoLabel = p.dispo === 'preco'
+    const dispoLabel = !this.ordersAvailable() ? 'Commandes fermées · consultation uniquement'
+      : p.dispo === 'preco'
       ? ('Sur réservation · retrait ' + p.retrait)
       : p.dispo === 'soldout' ? 'Épuisé pour le moment'
       : stock ? (p.reste + (p.reste > 1 ? ' barquettes restantes' : ' barquette restante'))
@@ -1277,10 +1305,11 @@ class Component extends DCLogic {
       prixLabel: 'dès ' + this.euro(v0.prix),
       dispoLabel,
       dispoStyle: "font:400 11.5px/1.4 'Work Sans';color:" + (p.dispo === 'low' ? '#B24A26' : p.dispo === 'preco' ? '#8A4B2A' : '#4E6141'),
-      ctaLabel: p.dispo === 'soldout' ? 'Épuisé' : p.dispo === 'preco' ? 'Réserver' : 'Ajouter',
+      ctaLabel: !this.ordersAvailable() ? 'Commandes fermées' : p.dispo === 'soldout' ? 'Épuisé' : p.dispo === 'preco' ? 'Réserver' : 'Ajouter',
+      ctaDisabled: !this.ordersAvailable() || p.dispo === 'soldout',
       photoStyle: this.photoBox(p.tint, '180px', (p.photos || [])[0]),
       overlayStyle: (p.photos || []).length ? 'display:none' : 'position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 12px)',
-      badges: this.badgeList(p.badges),
+      badges: this.badgeList(this.ordersAvailable() ? p.badges : p.badges.filter(b => !['Disponible maintenant', 'Presque épuisé'].includes(b)).concat('Commandes fermées')),
       thumbStyle: this.photoBox(p.tint, '88px', (p.photos || [])[0]) + ';width:88px;flex:none;border-radius:12px',
       open: () => { this.setState({ productId:p.id, ficheVariant:v0.id, ficheConservation:p.conservations[0], ficheQty:1 }); this.nav('fiche'); },
       add: () => p.dispo === 'soldout' ? this.flash('Ce plat est épuisé') : (p.variants.length > 1 || p.conservations.length > 1)
@@ -1352,7 +1381,7 @@ class Component extends DCLogic {
     } : { nom:'', categorie:'', variants:[], conservations:[], thumbStyle:'', dispoStyle:'', ctaLabel:'', stockNote:'', conservationNote:'', dispoLabel:'', detail:() => {} };
 
     // créneaux
-    const jourObj = JOURS.find(j => j.id === s.jour) || JOURS[0];
+    const jourObj = JOURS.find(j => j.id === s.jour) || JOURS[0] || {jour:'',date:'',dateRaw:'',creneaux:[]};
     const jours = JOURS.map(j => {
       const on = j.id === s.jour;
       return { jour:j.jour, date:j.date, plage:j.plage,
@@ -1366,16 +1395,11 @@ class Component extends DCLogic {
         select:() => { if (!full) this.setState({ creneau:c.id }); } };
     });
     const creneauObj = jourObj.creneaux.find(c => c.id === s.creneau);
-    const creneauResume = jourObj.jour + ' ' + jourObj.date + (creneauObj ? ' · ' + creneauObj.label : ' · créneau à choisir');
+    const creneauResume = this.ordersAvailable()
+      ? jourObj.jour + ' ' + jourObj.date + (creneauObj ? ' · ' + creneauObj.label : ' · créneau à choisir')
+      : 'Aucun retrait disponible pour le moment';
 
-    const calendrier = [];
-    for (let d = CALENDRIER.debut; d <= CALENDRIER.fin; d++) {
-      const k = CALENDRIER.retraits.indexOf(d) >= 0 ? 'retrait' : CALENDRIER.limites.indexOf(d) >= 0 ? 'limite' : '';
-      calendrier.push({ jour:d,
-        style:'display:flex;align-items:center;justify-content:center;height:34px;border-radius:9px;font:' + (k ? '500' : '300') + " 12.5px/1 'Work Sans';" + (k === 'retrait' ? 'background:#C9613F;color:#FBF6EE' : k === 'limite' ? 'background:#EAEFE2;color:#4E6141;border:1px solid #A8B795' : 'background:#F4EADC;color:#A9998C') });
-    }
-
-    const formOk = s.form.ok && s.form.nom.trim().length > 1 && s.form.tel.replace(/\D/g, '').length >= 9 && !!creneauObj && count > 0;
+    const formOk = this.ordersAvailable() && s.form.ok && s.form.nom.trim().length > 1 && s.form.tel.replace(/\D/g, '').length >= 9 && !!creneauObj && creneauObj.restant > 0 && count > 0;
     const mobileTabs = [
       { icon:'maison', label:'Accueil', key:'home', go:() => this.nav('home') },
       { icon:'marmite', label:'Les plats', key:'plats', go:() => this.nav('plats') },
@@ -1395,7 +1419,12 @@ class Component extends DCLogic {
     return {
       isMobile, isDesktop: !isMobile, showStatusBar: false, delai, logoUrl,
       contactPhone, contactEmail,
-      footerSchedule: JOURS.map(j => j.jour + ' ' + j.plage).join(' · '),
+      footerSchedule: JOURS.filter(j => j.creneaux.some(c => c.restant > 0)).map(j => j.jour + ' ' + j.date + ' · ' + j.plage).join(' · ') || 'Prochains horaires de retrait à venir',
+      ordersClosed: !this.ordersAvailable(),
+      retraitsAccueil: JOURS.filter(j => j.creneaux.some(c => c.restant > 0)).slice(0, 5).map(j => ({
+        date: j.jour + ' ' + j.date,
+        horaires: j.creneaux.filter(c => c.restant > 0).map(c => c.label).join(' · ')
+      })),
 
       shellOuter: 'width:100%;max-width:1440px;margin:0 auto;background:#FBF6EE',
       shellInner: 'position:relative;background:#FBF6EE',
@@ -1431,7 +1460,7 @@ class Component extends DCLogic {
       isPanier: s.route === 'panier', isCommande: s.route === 'commande', isConfirm: s.route === 'confirm',
       goHome: () => this.nav('home'), goPlats: () => this.nav('plats'),
       goPanier: () => this.nav('panier'), goCommande: () => this.nav('commande'),
-      goComment: () => this.nav('home'), goLaure: () => this.nav('home'), goFaq: () => this.nav('home'),
+      goComment: () => this.scrollHomeSection('comment'), goLaure: () => this.scrollHomeSection('laure'),
 
       platsHome: dispos, platsFiltres, precommandes: precos,
       resultLabel: platsFiltres.length + (platsFiltres.length > 1 ? ' plats' : ' plat') + ' · ' + dispos.length + " prêts aujourd'hui, " + precos.length + ' sur réservation',
@@ -1448,7 +1477,6 @@ class Component extends DCLogic {
       formules: FORMULES.map(x => ({ ...x, prix:this.euro(x.prix), add:() => this.addFormule(x) })),
       etapes: ETAPES.map(e => ({ ...e, iconPath:this.icon(e.icon), texte: e.n === '3' ? "Je vérifie ce qu'il me reste et je vous confirme par SMS, en général " + delai + '.' : e.texte })),
       engagements: ENGAGEMENTS.map(g => ({ ...g, iconPath:this.icon(g.icon) })),
-      joursSemaineEntetes: ['L', 'M', 'M', 'J', 'V', 'S', 'D'], calendrier,
 
       fiche: {
         nom:p.nom, categorie:p.categorie, descLongue:p.descLongue,
@@ -1457,8 +1485,8 @@ class Component extends DCLogic {
         conservations:this.consChips(p.conservations, ficheCons, (c) => this.setState({ ficheConservation:c })),
         conservationNote: CONS_NOTE[ficheCons] || '',
         vignettes:(p.photos || []).map((photo) => ({ label:'', style:this.photoBox(p.tint, '76px', photo) + ';border-radius:12px' })),
-        dispoTitre: p.dispo === 'preco' ? ('Sur réservation · retrait ' + p.retrait) : p.dispo === 'soldout' ? 'Épuisé pour le moment' : stock ? (p.reste + ' barquettes disponibles') : "Disponible aujourd'hui",
-        dispoTexte: p.dispo === 'preco' ? ('Je le cuisine à la demande. Réservez avant ' + p.limite + '.') : p.dispo === 'soldout' ? 'Revenez bientôt : le stock sera mis à jour dans le menu.' : 'Déjà cuisiné, réservé dès votre confirmation. Retrait sous 3 jours.',
+        dispoTitre: !this.ordersAvailable() ? 'Commandes fermées pour le moment' : p.dispo === 'preco' ? ('Sur réservation · retrait ' + p.retrait) : p.dispo === 'soldout' ? 'Épuisé pour le moment' : stock ? (p.reste + ' barquettes disponibles') : "Disponible aujourd'hui",
+        dispoTexte: !this.ordersAvailable() ? 'Les plats sont visibles, mais Laure n’a pas encore ouvert de créneau de retrait.' : p.dispo === 'preco' ? ('Je le cuisine à la demande. Réservez avant ' + p.limite + '.') : p.dispo === 'soldout' ? 'Revenez bientôt : le stock sera mis à jour dans le menu.' : 'Déjà cuisiné, réservé dès votre confirmation. Retrait sous 3 jours.',
         dispoBoxStyle: 'display:flex;flex-direction:column;gap:5px;padding:15px 17px;border-radius:15px;background:' + (p.dispo === 'preco' ? '#F4EADC' : p.dispo === 'low' ? '#FBE3DA' : '#EAEFE2') + ';color:' + (p.dispo === 'preco' ? '#7A5238' : p.dispo === 'low' ? '#A6421F' : '#4E6141'),
         details:[
           { label:'Ingrédients', valeur:p.ingredients },
@@ -1471,7 +1499,8 @@ class Component extends DCLogic {
       ficheHeroStyle: this.photoBox(p.tint, isMobile ? '250px' : '380px', (p.photos || [])[0]) + ';border-radius:22px',
       ficheOverlayStyle: (p.photos || []).length ? 'display:none' : 'position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 13px)',
       ficheQty: s.ficheQty,
-      ficheAddLabel: (p.dispo === 'preco' ? 'Réserver · ' : 'Ajouter · ') + this.euro(variant.prix * s.ficheQty),
+      ficheAddLabel: !this.ordersAvailable() ? 'Commandes fermées' : (p.dispo === 'preco' ? 'Réserver · ' : 'Ajouter · ') + this.euro(variant.prix * s.ficheQty),
+      ficheAddDisabled: !this.ordersAvailable() || this.availableFor(p.id, variant.id) <= 0,
       fichePlus: () => this.setState({ ficheQty: Math.min(Math.max(1, this.availableFor(p.id, variant.id)), s.ficheQty + 1) }),
       ficheMinus: () => this.setState({ ficheQty: Math.max(1, s.ficheQty - 1) }),
       ficheAdd: () => this.addToCart(p.id, variant.id, ficheCons, s.ficheQty),
@@ -1515,14 +1544,14 @@ class Component extends DCLogic {
       setNote:(e) => this.setState({ form:{ ...s.form, note:e.target.value } }),
       toggleOk:() => this.setState({ form:{ ...s.form, ok:!s.form.ok } }),
       submitStyle: "min-height:58px;border-radius:999px;border:0;font:500 16px/1 'Work Sans';cursor:" + (formOk && !s.sending ? 'pointer' : 'not-allowed') + ';background:' + (formOk && !s.sending ? '#C9613F' : 'rgba(251,246,238,.16)') + ';color:' + (formOk && !s.sending ? '#FBF6EE' : 'rgba(251,246,238,.45)'),
-      submitDisabled: !formOk || s.sending,
+      submitDisabled: !formOk || s.sending || !this.ordersAvailable(),
       submitButtonText: s.sending ? 'Envoi en cours…' : 'Envoyer ma demande',
       hasFormError: !!s.formError,
       formError: s.formError,
       submitHint: formOk ? 'Aucun paiement en ligne. Réponse par SMS ' + delai + '.' : 'Renseignez votre nom, votre téléphone et un créneau.',
       onOrderSubmit:async (e) => {
         e.preventDefault();
-        if (!formOk || s.sending || this._catalogueUnavailable) { this.flash('Informations manquantes ou menu indisponible'); return; }
+        if (!formOk || s.sending || !this.ordersAvailable() || !creneauObj || creneauObj.restant <= 0) { this.flash('Informations manquantes ou retrait indisponible'); return; }
         const body = {
           name:s.form.nom.trim(),phone:s.form.tel.trim(),email:s.form.email.trim(),note:s.form.note.trim(),
           consent:s.form.ok, pickupDate:jourObj.dateRaw, pickupTime:creneauObj.label,
