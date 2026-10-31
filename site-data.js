@@ -167,28 +167,41 @@ window.SiteData = (() => {
 
   function buildJours(rows) {
     const groups = new Map();
-    const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris", year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
-    const nowClock=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
-    const clock=value=>{const m=String(value||'').match(/^([01]?\d|2[0-3])h([0-5]\d)$/);return m?m[1].padStart(2,'0')+':'+m[2]:'';};
-    function toIso(raw) {
-      const date = String(raw || "").trim();
-      if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
-      const fr = date.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-      return fr ? `${fr[3]}-${fr[2]}-${fr[1]}` : "";
+    const now = new Date();
+    const today = new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(now);
+    const clockNow = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now);
+    const nowISO = today+'T'+clockNow;
+    const clock = value=>{const m=String(value||'').trim().match(/^([01]?\d|2[0-3])(?:h|:)([0-5]\d)$/);return m?m[1].padStart(2,'0')+':'+m[2]:'';};
+    const fmt = value=>value.replace(':','h');
+    function toIso(raw){
+      const text=String(raw||'').trim();
+      if(/^\d{4}-\d\d-\d\d/.test(text))return text.slice(0,10);
+      const fr=text.match(/^(\d\d)\/(\d\d)\/(\d{4})/);
+      return fr?fr[3]+'-'+fr[2]+'-'+fr[1]:'';
     }
-    rows.filter((row) => yes(cell(row, "Actif")))
-      .map((row) => ({ ...row, _iso: toIso(cell(row, "Date")) }))
-      .filter((row) => row._iso && row._iso >= today && number(cell(row, "Places disponibles")) >= 0)
-      .filter(row=>clock(cell(row,'Heure'))&&(row._iso>today||clock(cell(row,'Heure'))>nowClock))
-      .sort((a, b) => a._iso.localeCompare(b._iso) || clock(cell(a, "Heure")).localeCompare(clock(cell(b, "Heure"))))
-      .forEach((row) => {
-        const dateRaw = row._iso;
-        const id = slug(`${dateRaw}-${cell(row, "Jour")}`);
-        const current = groups.get(id) || { id, jour: cell(row, "Jour"), date: formatDate(dateRaw), dateRaw, creneaux: [] };
-        current.creneaux.push({ id: slug(`${dateRaw}-${cell(row, "Heure")}`), label: cell(row, "Heure"), restant: number(cell(row, "Places disponibles")) });
-        groups.set(id, current);
+    function cutoffIso(value){
+      const text=String(value||'').trim();
+      const iso=text.match(/^(\d{4}-\d\d-\d\d)[ T](\d\d:\d\d)/);
+      if(iso)return iso[1]+'T'+iso[2];
+      const fr=text.match(/^(\d\d)\/(\d\d)\/(\d{4})[ T,]+(\d\d:\d\d)/);
+      return fr?fr[3]+'-'+fr[2]+'-'+fr[1]+'T'+fr[4]:'';
+    }
+    rows.filter(row=>yes(cell(row,'Actif'))&&number(cell(row,'Places disponibles'))>0)
+      .map(row=>({...row,_iso:toIso(cell(row,'Date')),_clock:clock(cell(row,'Heure'))}))
+      .filter(row=>row._iso&&row._clock&&row._iso+'T'+row._clock>nowISO)
+      .filter(row=>{const cutoff=cutoffIso(cell(row,'Clôture commandes'));return !cutoff||cutoff>nowISO;})
+      .sort((a,b)=>a._iso.localeCompare(b._iso)||a._clock.localeCompare(b._clock))
+      .forEach(row=>{
+        const dateRaw=row._iso,start=fmt(row._clock),endClock=clock(cell(row,'Heure fin'));
+        const end=endClock?fmt(endClock):'';
+        const cutoff=cutoffIso(cell(row,'Clôture commandes'));
+        const id=slug(dateRaw);
+        const current=groups.get(id)||{id,jour:cell(row,'Jour'),date:formatDate(dateRaw),dateRaw,creneaux:[]};
+        current.creneaux.push({id:slug(dateRaw+'-'+start),label:end?start+' – '+end:start,start,end,cutoff,
+          restant:number(cell(row,'Places disponibles'))});
+        groups.set(id,current);
       });
-    return [...groups.values()].map((day) => ({ ...day, plage: day.creneaux.length ? `${day.creneaux[0].label} – ${day.creneaux[day.creneaux.length - 1].label}` : "" }));
+    return [...groups.values()].map(day=>({...day,plage:day.creneaux.map(c=>c.label).join(' · ')}));
   }
 
   function buildData(source) {

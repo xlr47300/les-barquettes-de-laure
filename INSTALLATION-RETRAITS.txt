@@ -1,0 +1,86 @@
+LES BARQUETTES DE LAURE — PRÉCOMMANDES ET PLAGES DE RETRAIT
+Version du 31 octobre 2026
+
+PRÉREQUIS
+- Application existante déjà opérationnelle ; journal privé OPERATIONS initialisé.
+- Sauvegarde de la branche main et du Code.gs actuel.
+- Choisir un moment sans commandes en cours. Laisser la prise de commandes
+  fermée pendant l'installation si elle est actuellement ouverte.
+
+INSTALLATION (DANS CET ORDRE)
+
+1. Ouvrir le projet Apps Script « Les Barquettes de Laure – Gestion ».
+   Remplacer entièrement l'unique Code.gs par le fichier séparé fourni.
+   Enregistrer. Ne pas toucher aux propriétés du script, secrets ni URL.
+
+2. Dans le sélecteur des fonctions Apps Script, choisir
+   initialiserRetraitsLaure puis cliquer sur Exécuter.
+   Cette migration, relançable, ajoute dans l'onglet CRÉNEAUX du classeur
+   « Pilotage du site - Les Barquettes de Laure » :
+   - Heure fin
+   - Clôture commandes
+   - ID créneau (identifiant interne, ne pas modifier)
+   Elle conserve toutes les anciennes dates, heures, capacités, commandes
+   et photos. Les anciens retraits sans heure de fin continuent d'exister ;
+   Laure pourra leur définir une plage depuis « Modifier la plage ».
+   Ne PAS exécuter setupLaure ni initialiserStabilisationLaure à nouveau.
+
+3. Apps Script : Déployer > Gérer les déploiements > crayon de la Web App
+   existante > Nouvelle version > Déployer. Garder la même URL /exec.
+   Ne pas créer un deuxième déploiement.
+
+4. Décompresser le ZIP GitHub et téléverser SON CONTENU à la racine de
+   github.com/xlr47300/les-barquettes-de-laure, branche main.
+   Remplacer les fichiers de mêmes noms en conservant l'arborescence.
+   Ne PAS supprimer les autres fichiers (functions/, uploads/, logo...).
+   Commit changes. Vérifier le déploiement vert sur Cloudflare Pages.
+
+5. Ouvrir le site public et l'espace gestion, actualiser les deux pages.
+   Si des pages anciennes restent ouvertes, forcer le rechargement.
+
+FONCTIONNEMENT
+- Dans Gestion > Retraits > Nouveau créneau : définir date, heure de début,
+  heure de fin, nombre de commandes possibles, et clôture des commandes.
+  Le formulaire propose « la veille à 18 h » si cette heure est encore future.
+  Une clôture vide signifie « jusqu'au début du retrait ».
+- « Modifier la plage » permet de changer les paramètres. Si une commande
+  historique existe pour cette date/heure, la date et les horaires sont
+  verrouillés : créer une nouvelle plage et fermer l'ancienne si nécessaire.
+- Le bouton Enregistrer de la carte permet de modifier uniquement places et
+  ouvert/fermé. Pour fermer un créneau, décocher Créneau ouvert et enregistrer.
+- Les clients voient les plages sous la forme 17h30 – 19h00, mais la
+  réservation conserve l'heure de DÉBUT en base, pour maintenir l'historique.
+- Les stocks sont toujours partagés entre les retraits pour chaque format.
+- Anciennes lignes : sans heure de fin, elles apparaissent encore comme 12h00
+  ou 17h30 tant que Laure n'a pas défini leur heure de fin.
+
+IMPORTANT : COMMANDES FERMÉES
+L'ouverture d'une plage ne suffit pas si Cloudflare désactive les commandes.
+Dans Cloudflare Pages > Settings > Variables and secrets, vérifier :
+- ORDERS_ENABLED = true, sur la production, UNIQUEMENT lors de l'ouverture.
+- TURNSTILE_SITE_KEY et TURNSTILE_SECRET présents (ne jamais divulguer).
+L'API publique /api/config indique « ordersEnabled » : false signifie que
+la prise de commandes reste désactivée. Les changements de variables
+Cloudflare peuvent exiger un nouveau déploiement. Ne pas activer les
+commandes avant les contrôles et sans l'accord de Laure.
+
+TEST À FAIRE AVANT LES VRAIES COMMANDES
+1. Créer une plage future, par ex. lundi 17h30–19h avec clôture la veille 18h.
+2. Vérifier affichage de la plage sur le site PUBLIC si commandes activées.
+3. Avec ses propres coordonnées, passer UNE commande test et noter stock,
+   capacité et numéro de commande avant/après.
+4. Vérifier son apparition dans Gestion > Commandes et le décrément exact.
+5. Vérifier qu'on ne peut plus déplacer une plage ayant reçu une commande.
+6. Annuler une seule fois la commande test ; vérifier restitution et OPERATIONS.
+7. Vérifier sur téléphone (notamment le calendrier, l'horloge et le formulaire).
+
+SÉCURITÉ / LIMITES
+- Aucune donnée client ni photo n'est incluse dans ce ZIP.
+- Aucun service de production n'a été modifié par la préparation de ce ZIP.
+- Tests locaux uniquement, avec données fictives. Le rendu mobile et le
+  fonctionnement réel de Google Sheets restent à vérifier après déploiement.
+- Aucun autre script, automatisme ou utilisateur ne doit écrire directement
+  dans les stocks/places pendant l'utilisation ; ne jamais trier, déplacer
+  ou renommer les lignes de créneaux en cours de commande.
+- En cas de « reprise bloquée » : ne pas modifier OPERATIONS manuellement,
+  ne pas réinstaller l'ancien backend avant diagnostic.

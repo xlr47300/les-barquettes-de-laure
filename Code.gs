@@ -121,6 +121,56 @@ function deadlineTime_(value){
 }
 function nowISO_(){return Utilities.formatDate(new Date(),'Europe/Paris',"yyyy-MM-dd'T'HH:mm:ss");}
 function today_(){return Utilities.formatDate(new Date(),'Europe/Paris','yyyy-MM-dd');}
+// Créneaux : date et heure de début restent les identifiants historiques des commandes.
+const RETRAIT_COLS={end:'Heure fin',cutoff:'Clôture commandes',id:'ID créneau'};
+function heureRetrait_(value){
+  const m=clean_(value,12).match(/^([01]?\d|2[0-3])(?:h|:)([0-5]\d)$/);
+  return m?m[1].padStart(2,'0')+'h'+m[2]:'';
+}
+function isoDateValide_(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+  const d=new Date(value+'T12:00:00Z');return !isNaN(d.valueOf())&&d.toISOString().slice(0,10)===value;
+}
+function heureISO_(hour){return hour?hour.replace('h',':'):'';}
+function clotureValide_(value){
+  if(!value)return true;
+  const match=value.match(/^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):([0-5]\d)$/);
+  return !!match&&isoDateValide_(match[1]);
+}
+function debutRetrait_(slot){const date=dateISO_(slot.Date),time=heureRetrait_(slot.Heure);return date&&time?date+'T'+heureISO_(time)+':00':'';}
+function clotureRetrait_(slot){return deadlineTime_(slot[RETRAIT_COLS.cutoff])||debutRetrait_(slot);}
+function retraitReservable_(slot){
+  const start=debutRetrait_(slot),end=clotureRetrait_(slot),now=nowISO_();
+  return !!start&&!!end&&now<start&&now<end;
+}
+function verifierSchemaRetraits_(data){
+  Object.values(RETRAIT_COLS).forEach(col=>{if(!data.headers.includes(col))fail_('Initialiser les retraits : exécuter initialiserRetraitsLaure dans Apps Script.',503);});
+}
+/** Migration additive : trois colonnes techniques, aucune modification des anciennes cellules. */
+function initialiserRetraitsLaure(){
+  const lock=LockService.getScriptLock();if(!lock.tryLock(25000))fail_('Service occupé',503);
+  try{
+    resumeOperations_();
+    const sheet=catalog_().getSheetByName('CRÉNEAUX');if(!sheet)fail_('Onglet CRÉNEAUX introuvable',503);
+    const headers=sheet.getRange(4,1,1,sheet.getLastColumn()).getDisplayValues()[0].map(x=>clean_(x));
+    for(const key of ['Actif','Date','Heure','Places disponibles'])if(!headers.includes(key))fail_('Colonne manquante : '+key,503);
+    for(const name of Object.values(RETRAIT_COLS)){
+      if(headers.filter(h=>h===name).length>1)fail_('En-tête dupliqué : '+name,503);
+      if(!headers.includes(name)){
+        if(headers.length>=52)fail_('Trop de colonnes pour la lecture publique A4:AZ1000.',503);
+        const col=headers.length+1;ensureCapacity_(sheet,4,col);sheet.getRange(4,col).setValue(name);headers.push(name);
+      }
+    }
+    const idCol=headers.indexOf(RETRAIT_COLS.id)+1,dateCol=headers.indexOf('Date')+1;
+    for(let row=5;row<=sheet.getLastRow();row++){
+      const hasDate=sheet.getRange(row,dateCol).getValue();
+      if(hasDate&&!sheet.getRange(row,idCol).getValue())sheet.getRange(row,idCol).setValue(Utilities.getUuid());
+    }
+    SpreadsheetApp.flush();Logger.log('Colonnes de retrait prêtes. Les créneaux et commandes historiques sont conservés.');
+    return {ready:true,headers:Object.values(RETRAIT_COLS)};
+  }finally{lock.releaseLock();}
+}
+
 function sheetData_(sheet,headerRow){
   if(!sheet)fail_('Onglet manquant',503);
   const max=sheet.getLastColumn();
@@ -161,10 +211,8 @@ function createOrder_(input,manual){
     const slotData=sourceData_('CRÉNEAUX');
     const slot=slotData.items.find(s=>yes_(s.Actif)&&dateISO_(s.Date)===date&&clean_(s.Heure,30)===time);
     if(!slot || numeric_(slot['Places disponibles'])<1)fail_('Ce créneau n’est plus disponible');
-    const clock=clean_(time,30).match(/^(\d{1,2})h(\d{2})$/);
-    if(!clock)fail_('Heure de retrait incorrecte');
-    const slotClock=clock[1].padStart(2,'0')+':'+clock[2];
-    if(date===today_()&&slotClock<=Utilities.formatDate(new Date(),'Europe/Paris','HH:mm'))fail_('Ce créneau est déjà passé');
+    if(!retraitReservable_(slot))fail_('La date limite de réservation de ce retrait est dépassée');
+    if(!heureRetrait_(time))fail_('Heure de retrait incorrecte');
     const plats=sourceData_('PLATS');
     const wanted=new Map(),lines=[];
     let totalCents=0;
@@ -210,7 +258,7 @@ function createOrder_(input,manual){
     steps.push(plannedWrite_('private','LIGNES',lineSheet.getLastRow()+1,1,values));
     steps.push(journalStep_(book,orderId,'Création',manual?'Saisie manuelle':'Demande site'));
     commitOperation_('order-'+requestKey,steps);
-    notifyLaure_(orderId,name,phone,date,time,lines,totalCents/100);
+    notifyLaure_(orderId,name,phone,date,heureRetrait_(slot[RETRAIT_COLS.end])?time+' – '+heureRetrait_(slot[RETRAIT_COLS.end]):time,lines,totalCents/100);
     return {orderId,total:totalCents/100,duplicate:false,items:receiptItems_(orderId)};
   });
 }
@@ -244,8 +292,9 @@ function snapshot_(){
     conservation:p['État actuel']||'Frais',
     variants:Object.entries(LAURE.variants).map(([id,[on,price,stock,label]])=>({id,label,active:yes_(p[on]),price:numeric_(p[price]),stock:numeric_(p[stock])}))
   }));
-  const slots=sourceData_('CRÉNEAUX').items.filter(s=>s.Date).map(s=>({date:dateISO_(s.Date),time:s.Heure,
-    available:numeric_(s['Places disponibles']),active:yes_(s.Actif)}));
+  const slots=sourceData_('CRÉNEAUX').items.filter(s=>s.Date).map(s=>({id:clean_(s[RETRAIT_COLS.id],90),date:dateISO_(s.Date),time:heureRetrait_(s.Heure)||s.Heure,
+    endTime:heureRetrait_(s[RETRAIT_COLS.end]),cutoff:(deadlineTime_(s[RETRAIT_COLS.cutoff])||'').slice(0,16),
+    available:numeric_(s['Places disponibles']),active:yes_(s.Actif),reservable:yes_(s.Actif)&&numeric_(s['Places disponibles'])>0&&retraitReservable_(s)}));
   const formulas=sourceData_('FORMULES').items.filter(f=>yes_(f.Actif)).map(f=>({id:'formule-'+slug_(f.Nom||f['ID formule']),name:f.Nom,price:numeric_(f['Prix TTC'])}));
   return {orders:prepared,products,slots,formulas,asOf:nowISO_()};
 }
@@ -335,9 +384,43 @@ function editProduct_(input){return withLock_(()=>{
 });}
 function editSlot_(input){return withLock_(()=>{
   const data=sourceData_('CRÉNEAUX');
-  const slot=data.items.find(s=>dateISO_(s.Date)===clean_(input.date,20)&&s.Heure===clean_(input.time,30));
-  if(!slot)fail_('Créneau non trouvé',404);
+  const originalId=clean_(input.id,90),oldDate=clean_(input.date,20),oldTime=heureRetrait_(input.time);
+  const slot=data.items.find(s=>originalId&&clean_(s[RETRAIT_COLS.id],90)===originalId)||
+    data.items.find(s=>dateISO_(s.Date)===oldDate&&heureRetrait_(s.Heure)===oldTime);
+  if(!slot)fail_('Créneau introuvable. Actualisez la page.',404);
   const steps=[];
+  const date=dateISO_(slot.Date),time=heureRetrait_(slot.Heure);
+  const nextDate=input.newDate===undefined?date:clean_(input.newDate,20);
+  const nextTime=input.newTime===undefined?time:heureRetrait_(input.newTime);
+  const nextEnd=input.endTime===undefined?heureRetrait_(slot[RETRAIT_COLS.end]):heureRetrait_(input.endTime);
+  const nextCutoff=input.cutoff===undefined?(deadlineTime_(slot[RETRAIT_COLS.cutoff])||'').slice(0,16):clean_(input.cutoff,20);
+  const identityChange=nextDate!==date||nextTime!==time;
+  const endChange=input.endTime!==undefined&&nextEnd!==heureRetrait_(slot[RETRAIT_COLS.end]);
+  const cutoffChange=input.cutoff!==undefined&&nextCutoff!==(deadlineTime_(slot[RETRAIT_COLS.cutoff])||'').slice(0,16);
+  if(input.newDate!==undefined||input.newTime!==undefined||input.endTime!==undefined||input.cutoff!==undefined){
+    verifierSchemaRetraits_(data);
+    if(!isoDateValide_(nextDate)||!nextTime||((identityChange||endChange)&&!nextEnd)||(nextEnd&&nextEnd<=nextTime))fail_('Date ou plage horaire incorrecte : l’heure de fin doit suivre le début.');
+    if(nextDate<today_()&&(identityChange||endChange))fail_('Impossible de déplacer un retrait vers une date passée.');
+    if(!clotureValide_(nextCutoff)||(nextCutoff&&nextCutoff>nextDate+'T'+heureISO_(nextTime)))fail_('La clôture doit précéder le début du retrait.');
+    if(data.items.some(s=>s._row!==slot._row&&dateISO_(s.Date)===nextDate&&heureRetrait_(s.Heure)===nextTime))fail_('Un retrait existe déjà à cette date et heure.');
+    const orderExists=(identityChange||endChange)&&readPrivate_(privateBook_(),'COMMANDES').items.some(o=>dateISO_(o['Date retrait'])===date&&heureRetrait_(o['Heure retrait'])===time);
+    if(orderExists)fail_('Des commandes sont déjà associées à ce retrait. Sa date ou sa plage ne peut pas être déplacée : fermez-le et créez un nouveau créneau.',409);
+    if(identityChange){
+      if(input.expected?.date!==date||heureRetrait_(input.expected?.time)!==time)fail_('Ce retrait a été modifié : actualisez la page.',409);
+      if(nextDate!==date){steps.push(dataWrite_(data,slot._row,'Date',nextDate));
+        const jours=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+        const jour=jours[new Date(nextDate+'T12:00:00Z').getUTCDay()];
+        if(data.headers.includes('Jour'))steps.push(dataWrite_(data,slot._row,'Jour',jour));
+      }
+      if(nextTime!==time)steps.push(dataWrite_(data,slot._row,'Heure',nextTime));
+    }
+    if(endChange){expectedCell_(input,'endTime',data,slot._row,RETRAIT_COLS.end);steps.push(dataWrite_(data,slot._row,RETRAIT_COLS.end,nextEnd));}
+    if(cutoffChange){
+      const current=(deadlineTime_(slot[RETRAIT_COLS.cutoff])||'').slice(0,16);
+      if(input.expected?.cutoff!==current)fail_('La clôture a été modifiée : actualisez.',409);
+      steps.push(dataWrite_(data,slot._row,RETRAIT_COLS.cutoff,nextCutoff));
+    }
+  }
   if(input.available!==undefined){expectedCell_(input,'available',data,slot._row,'Places disponibles','number');const n=Number(input.available);if(!Number.isInteger(n)||n<0||n>1000)fail_('Nombre de places incorrect');steps.push(dataWrite_(data,slot._row,'Places disponibles',n));}
   if(typeof input.active==='boolean'){expectedCell_(input,'active',data,slot._row,'Actif','bool');steps.push(dataWrite_(data,slot._row,'Actif',input.active?'Oui':'Non'));}
   if(steps.length)commitOperation_('slot-'+Utilities.getUuid(),steps);
@@ -349,16 +432,23 @@ function appendCatalog_(data,values){
   data.sheet.getRange(data.sheet.getLastRow()+1,1,1,line.length).setValues([line]);
 }
 function createSlot_(input){return withLock_(()=>{
-  const data=sourceData_('CRÉNEAUX');
-  const date=clean_(input.date,20), time=clean_(input.time,10),places=Number(input.available);
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<today_()||!Number.isFinite(new Date(date+'T12:00:00').valueOf()))fail_('Date invalide');
-  if(!/^([01]?\d|2[0-3])h[0-5]\d$/.test(time))fail_('Heure attendue sous la forme 17h30');
-  if(!Number.isInteger(places)||places<1||places>1000)fail_('Places invalides');
-  if(data.items.some(x=>dateISO_(x.Date)===date&&x.Heure===time))fail_('Ce créneau existe déjà');
-  const jour=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][new Date(date+'T12:00:00').getDay()];
-  appendCatalog_(data,{Actif:'Oui',Date:date,Jour:jour,Heure:time,'Places disponibles':places});
+  const data=sourceData_('CRÉNEAUX');verifierSchemaRetraits_(data);
+  const date=clean_(input.date,20),time=heureRetrait_(input.time),endTime=heureRetrait_(input.endTime);
+  const cutoff=clean_(input.cutoff,20),places=Number(input.available);
+  if(!isoDateValide_(date)||date<today_())fail_('Date de retrait invalide');
+  if(!time||!endTime||endTime<=time)fail_('Choisissez une heure de fin après l’heure de début.');
+  if(!clotureValide_(cutoff)||(cutoff&&cutoff>date+'T'+heureISO_(time)))fail_('La clôture doit précéder le début du retrait.');
+  if(!Number.isInteger(places)||places<0||places>1000)fail_('Nombre de commandes incorrect');
+  if(data.items.some(x=>dateISO_(x.Date)===date&&heureRetrait_(x.Heure)===time))fail_('Ce retrait existe déjà');
+  const jours=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const jour=jours[new Date(date+'T12:00:00Z').getUTCDay()];
+  const values={Actif:input.active===false?'Non':'Oui',Date:date,Jour:jour,Heure:time,'Places disponibles':places,
+    [RETRAIT_COLS.end]:endTime,[RETRAIT_COLS.cutoff]:cutoff,[RETRAIT_COLS.id]:Utilities.getUuid()};
+  // Création append : chaque nouvelle ligne possède dès l'origine un identifiant stable.
+  appendCatalog_(data,values);
   return {created:true};
 });}
+
 function createProduct_(input){return withLock_(()=>{
   const data=sourceData_('PLATS');
   const name=clean_(input.name,100),description=clean_(input.description,300),ingredients=clean_(input.ingredients,800);
@@ -518,7 +608,9 @@ function plannedWrite_(book,sheet,row,col,after){
   const anchors=[];
   if(book==='catalog'&&row>4&&['PLATS','CRÉNEAUX'].includes(sheet)){
     const headers=target.getRange(4,1,1,target.getLastColumn()).getDisplayValues()[0];
-    for(const key of (sheet==='PLATS'?['Nom du plat']:['Date','Heure'])){
+    const stableSlot=sheet==='CRÉNEAUX'&&headers.includes(RETRAIT_COLS.id)&&
+      !!target.getRange(row,headers.indexOf(RETRAIT_COLS.id)+1).getValue();
+    for(const key of sheet==='PLATS'?['Nom du plat']:stableSlot?[RETRAIT_COLS.id]:['Date','Heure']){
       const anchorCol=headers.indexOf(key)+1;if(anchorCol<1)fail_('Identité de ligne absente : '+key,503);
       anchors.push({row,col:anchorCol,value:normal([[target.getRange(row,anchorCol).getValue()]])[0][0]});
     }

@@ -2,6 +2,11 @@ const state={page:'accueil',data:null,query:'',status:'Toutes',date:'Toutes',bus
 const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const eur=value=>Number(value||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+const heureForm=value=>{const m=String(value||'').match(/^([01]?\d|2[0-3])(?:h|:)([0-5]\d)$/);return m?m[1].padStart(2,'0')+':'+m[2]:'';};
+const heureAffiche=slot=>slot.endTime?slot.time+' – '+slot.endTime:slot.time;
+const cutoffAffiche=slot=>slot.cutoff?slot.cutoff.replace('T',' à ').replace(':','h'):'jusqu’au début du retrait';
+const nowParis=()=>{const d=new Date();return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(d)+'T'+new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d);};
+const retraitReservable=slot=>slot.active&&slot.available>0&&slot.date+'T'+heureForm(slot.time)>nowParis()&&(!slot.cutoff||slot.cutoff>nowParis());
 const shortDate=value=>{const d=new Date(String(value||'')+'T12:00:00');return Number.isNaN(d.valueOf())?value:d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});};
 const statusClass=v=>v==='Annulée'?'red':v==='Prête'||v==='Retirée'?'green':v==='À confirmer'?'orange':'gray';
 let timer;
@@ -27,12 +32,13 @@ async function mutate(payload){
 function label(title,subtitle=''){return `<div class="section-title"><h2>${esc(title)}</h2>${subtitle?`<span class="muted short">${esc(subtitle)}</span>`:''}</div>`;}
 function orders(){return state.data?.orders||[];}
 function activeOrders(){return orders().filter(o=>o.status!=='Annulée');}
+function orderPickupLabel(o){const slot=(state.data?.slots||[]).find(s=>s.date===o.pickupDate&&s.time===o.pickupTime);return slot?.endTime?o.pickupTime+' – '+slot.endTime:o.pickupTime;}
 function lines(o){return o.lines.map(l=>`${l.qty} × ${esc(l.name)} <small>(${esc(l.label)})</small>`).join(' · ');}
 function orderCard(o){
   const badges=`<span class="badge ${statusClass(o.status)}">${esc(o.status)}</span> <span class="badge ${o.payment==='Réglée'?'green':'gray'}">${esc(o.payment)}</span>`;
   const selectOpts=['À confirmer','Confirmée','En préparation','Prête','Retirée','Annulée']
     .map(s=>`<option value="${esc(s)}" ${o.status===s?'selected':''} ${o.status==='Annulée'&&s!=='Annulée'?'disabled':''}>${esc(s)}</option>`).join('');
-  return `<article class="order" data-id="${esc(o.id)}"><div class="top"><div><strong>${esc(o.name)}</strong> <small>· ${esc(o.id)}</small><div class="meta"><span class="muted">${esc(shortDate(o.pickupDate))} à ${esc(o.pickupTime)}</span><span>${badges}</span></div></div><b>${eur(o.total)}</b></div><div class="details">${lines(o)}${o.note?`<p class="helper">Note : ${esc(o.note)}</p>`:''}</div><div class="bottom"><span class="short muted">${esc(o.phone)}${o.email?' · '+esc(o.email):''}</span><div class="row wrap"><select aria-label="Modifier le statut" class="order-status" ${o.status==='Annulée'?'disabled':''}>${selectOpts}</select><button type="button" class="btn secondary payment-toggle" ${o.status==='Annulée'?'disabled':''}>${o.payment==='Réglée'?'Marquer non réglée':'Marquer réglée'}</button></div></div></article>`;
+  return `<article class="order" data-id="${esc(o.id)}"><div class="top"><div><strong>${esc(o.name)}</strong> <small>· ${esc(o.id)}</small><div class="meta"><span class="muted">${esc(shortDate(o.pickupDate))} à ${esc(orderPickupLabel(o))}</span><span>${badges}</span></div></div><b>${eur(o.total)}</b></div><div class="details">${lines(o)}${o.note?`<p class="helper">Note : ${esc(o.note)}</p>`:''}</div><div class="bottom"><span class="short muted">${esc(o.phone)}${o.email?' · '+esc(o.email):''}</span><div class="row wrap"><select aria-label="Modifier le statut" class="order-status" ${o.status==='Annulée'?'disabled':''}>${selectOpts}</select><button type="button" class="btn secondary payment-toggle" ${o.status==='Annulée'?'disabled':''}>${o.payment==='Réglée'?'Marquer non réglée':'Marquer réglée'}</button></div></div></article>`;
 }
 function statsHtml(arr){return `<div class="stats">${arr.map(([v,k])=>`<div class="stat"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>`;}
 function dateOptions(){
@@ -167,15 +173,39 @@ function renderCatalogue(){
   return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les plats</h2><button type="button" id="new-product" class="btn primary">+ Nouveau plat</button></div><div class="notice">Modification directe des stocks et prix du Google Sheets « Catalogue ». Les informations du site public se mettent à jour à son prochain chargement.</div><div class="catalogue-grid">${ps.map(p=>`<article class="product" data-product="${esc(p.id)}"><div class="head"><h3>${esc(p.name)}</h3><label class="row"><input type="checkbox" class="product-active" ${p.active?'checked':''}> <span class="short">Publié</span></label></div>${p.image?`<img class="product-thumb" src="${esc(photoUrl(p.image))}" loading="lazy" alt="Photo de ${esc(p.name)}">`:''}<div class="row space" style="margin-top:9px"><span class="muted short">${esc(p.conservation)} · ${p.dlc?'DLC renseignée':'DLC à renseigner'}</span><button type="button" class="btn secondary product-edit">Modifier la fiche</button></div>${p.variants.filter(v=>v.id!=='fam').map(v=>`<div class="variant" data-variant="${esc(v.id)}"><div><b class="short">${esc(v.label)}</b><label class="row"><input type="checkbox" class="variant-active" style="width:16px;min-height:16px" ${v.active?'checked':''}> Format actif</label></div><label>Prix (€)<input type="number" class="price" min="0" max="1000" step="0.01" value="${v.price}"></label><label>Stock<input type="number" class="stock" min="0" max="9999" step="1" value="${v.stock}"></label><button type="button" class="btn secondary product-save">Enregistrer</button></div>`).join('')}</article>`).join('')}</div>`;
 }
 function slotCards(slots){
-  return `<div class="slot-grid">${slots.map(s=>`<article class="slot-card" data-date="${esc(s.date)}" data-time="${esc(s.time)}"><b>${esc(shortDate(s.date))}</b><p>${esc(s.time)}</p><label>Places disponibles<input class="places" type="number" min="0" max="1000" step="1" value="${s.available}"></label><label class="row"><input type="checkbox" class="slot-active" style="width:17px;min-height:17px" ${s.active?'checked':''}> Créneau ouvert</label><button class="btn secondary slot-save" type="button">Enregistrer</button></article>`).join('')}</div>`;
+  return `<div class="slot-grid">${slots.map(s=>`<article class="slot-card" data-date="${esc(s.date)}" data-time="${esc(s.time)}" data-id="${esc(s.id||'')}"><b>${esc(shortDate(s.date))}</b><p>${esc(heureAffiche(s))}</p><p class="helper">Réservations : ${esc(cutoffAffiche(s))} · ${s.active?(s.reservable?'Réservable':'Clôturé ou complet'):'Fermé'}</p><label>Places encore disponibles<input class="places" type="number" min="0" max="1000" step="1" value="${s.available}"></label><label class="row"><input type="checkbox" class="slot-active" style="width:17px;min-height:17px" ${s.active?'checked':''}> Créneau ouvert</label><div class="slot-actions"><button class="btn secondary slot-save" type="button">Enregistrer</button><button class="btn secondary slot-edit" type="button">Modifier la plage</button></div></article>`).join('')}</div>`;
 }
 function renderRetraits(){
-  const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
   const slots=[...(state.data?.slots||[])].sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+  const today=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
   const future=slots.filter(s=>s.date>=today);
   const previous=slots.filter(s=>s.date<today).reverse();
-  return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les créneaux</h2><button type="button" id="new-slot" class="btn primary">+ Nouveau créneau</button></div><div class="notice">Le nombre de places correspond aux commandes possibles, et non au nombre de barquettes. Les créneaux passés restent dans l'historique.</div>${label('Retraits à venir',future.length+' créneau(x)')}${future.length?slotCards(future):'<div class="empty">Aucun retrait programmé. Cliquez sur « Nouveau créneau ».</div>'}${previous.length?`<details class="slot-archive"><summary>Historique des retraits (${previous.length})</summary>${slotCards(previous)}</details>`:''}`;
+  return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les créneaux</h2><button type="button" id="new-slot" class="btn primary">+ Nouveau créneau</button></div><div class="notice">Chaque retrait dispose d’une plage horaire et d’une date limite de commande. Les stocks restent communs à tous les créneaux. Un retrait déjà associé à une commande ne peut pas être déplacé.</div>${label('Retraits à venir',future.length+' créneau(x)')}${future.length?slotCards(future):'<div class="empty">Aucun retrait programmé. Cliquez sur « Nouveau créneau ».</div>'}${previous.length?`<details class="slot-archive"><summary>Historique des retraits (${previous.length})</summary>${slotCards(previous)}</details>`:''}`;
 }
+function suggestedCutoff(date){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return '';
+  const previous=new Date(Date.parse(date+'T12:00:00Z')-86400000).toISOString().slice(0,10);
+  const suggested=previous+'T18:00';return suggested>nowParis()?suggested:'';
+}
+function openSlotModal(slot=null){
+  const form=$('#slot-form');form.reset();
+  form.elements.slotId.value=slot?.id||'';
+  form.dataset.oldDate=slot?.date||'';form.dataset.oldTime=slot?.time||'';
+  form.elements.date.min=slot? '':new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
+  form.elements.date.value=slot?.date||'';
+  form.elements.time.value=heureForm(slot?.time)||'17:30';
+  form.elements.endTime.value=heureForm(slot?.endTime)||(!slot?'19:00':'');
+  form.elements.cutoff.value=slot?.cutoff||(!slot&&form.elements.date.value?suggestedCutoff(form.elements.date.value):'');
+  form.elements.available.value=slot?.available??5;
+  form.elements.active.checked=slot?.active??true;
+  const occupied=!!slot&&orders().some(o=>o.pickupDate===slot.date&&o.pickupTime===slot.time);
+  for(const key of ['date','time','endTime'])form.elements[key].disabled=occupied;
+  $('#slot-edit-info').textContent=occupied?'Une commande existe déjà sur cette plage : date et horaires verrouillés. Vous pouvez modifier la capacité, la clôture et le statut.':'Choisissez les horaires et la clôture des commandes. Une clôture vide autorise les commandes jusqu’au début du retrait.';
+  $('#slot-title').textContent=slot?'Modifier un retrait':'Ouvrir un retrait';
+  $('#save-slot').textContent=slot?'Enregistrer les modifications':'Créer le créneau';
+  $('#slot-modal').showModal();
+}
+
 const pages={accueil:['Tableau de bord',renderHome],commandes:['Les commandes',renderOrders],cuisine:['Préparation en cuisine',renderKitchen],clients:['Fichier clients',renderClients],catalogue:['Catalogue des plats',renderCatalogue],retraits:['Créneaux de retrait',renderRetraits]};
 function render(){
   if(!state.data)return;
@@ -194,8 +224,8 @@ function addManualLine(){
   $('#manual-lines').append(div);
 }
 function openManual(){
-  const choices=(state.data?.slots||[]).filter(s=>s.active&&s.available>0&&s.date>=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'}));
-  $('#manual-slot').innerHTML=choices.map(s=>`<option value="${esc(s.date+'|'+s.time)}">${esc(shortDate(s.date))} · ${esc(s.time)}</option>`).join('');
+  const choices=(state.data?.slots||[]).filter(retraitReservable);
+  $('#manual-slot').innerHTML=choices.length?choices.map(s=>`<option value="${esc(s.date+'|'+s.time)}">${esc(shortDate(s.date))} · ${esc(heureAffiche(s))}</option>`).join(''):'<option value="">Aucun retrait réservable</option>';
   $('#manual-form').reset();$('#manual-lines').innerHTML='';addManualLine();
   $('#manual-modal').showModal();
 }
@@ -205,11 +235,12 @@ document.addEventListener('click',async e=>{
   const closer=e.target.closest('[data-close]');if(closer){document.getElementById(closer.dataset.close)?.close();return;}
   if(e.target.closest('#new-product')){const form=$('#product-form');form.reset();form.elements.name.readOnly=false;form.elements.price.disabled=false;form.elements.stock.disabled=false;form.elements.editId.value='';$('#duo-active').disabled=false;$('#duo-active').checked=false;$('#product-title').textContent='Créer une fiche plat';$('#save-product-details').textContent='Enregistrer le brouillon';resetPhoto(null);toggleDuoFields();$('#product-modal').showModal();return;}
   const edit=e.target.closest('.product-edit');if(edit){const id=edit.closest('[data-product]').dataset.product;const product=(state.data?.products||[]).find(p=>p.id===id);if(!product)return;const form=$('#product-form');form.reset();form.elements.editId.value=id;for(const key of ['description','ingredients','allergens','dlc','reheating','conservation'])form.elements[key].value=product[key]||'';form.elements.name.value=product.name;form.elements.name.readOnly=true;form.elements.price.disabled=true;form.elements.stock.disabled=true;form.elements.price.value=(product.variants.find(v=>v.id==='indiv')||{}).price||0;form.elements.stock.value=(product.variants.find(v=>v.id==='indiv')||{}).stock||0;$('#duo-active').disabled=true;$('#duo-active').checked=!!product.variants.find(v=>v.id==='duo')?.active;toggleDuoFields();resetPhoto(product);$('#product-title').textContent='Modifier la fiche : '+product.name;$('#save-product-details').textContent='Enregistrer la fiche';$('#product-modal').showModal();return;}
-  if(e.target.closest('#new-slot')){
-    const form=$('#slot-form');form.reset();
-    form.elements.date.min=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
-    form.elements.time.value='17:30';
-    $('#slot-modal').showModal();return;
+  if(e.target.closest('#new-slot')){openSlotModal();return;}
+  const modifySlot=e.target.closest('.slot-edit');if(modifySlot){
+    const card=modifySlot.closest('[data-date]');
+    const old=(state.data?.slots||[]).find(s=>s.date===card.dataset.date&&s.time===card.dataset.time);
+    if(old)openSlotModal(old);
+    return;
   }
   if(e.target.closest('#refresh')){await refresh();return;}
   if(e.target.closest('#add-order')){openManual();return;}
@@ -276,15 +307,34 @@ $('#manual-form').addEventListener('submit',async e=>{
 });
 refresh(true);
 
+$('#slot-form').addEventListener('change',e=>{
+  if(e.target.name==='date'&&!e.currentTarget.elements.slotId.value){e.currentTarget.elements.cutoff.value=suggestedCutoff(e.target.value);}
+});
 $('#slot-form').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const data=new FormData(e.currentTarget);
-  const time=String(data.get('time')||'').trim();
-  const match=time.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
-  if(!match){notice('Choisissez une heure valide dans le sélecteur.');return;}
-  const payload={action:'slotCreate',date:data.get('date'),time:`${match[1]}h${match[2]}`,available:Number(data.get('available'))};
+  e.preventDefault();if(state.busy)return;
+  const form=e.currentTarget,oldId=form.elements.slotId.value;
+  const date=form.elements.date.value,time=heureForm(form.elements.time.value).replace(':','h'),endTime=heureForm(form.elements.endTime.value).replace(':','h');
+  const cutoff=form.elements.cutoff.value,available=Number(form.elements.available.value),active=form.elements.active.checked;
+  if(!date||!time||(!endTime&&!form.elements.endTime.disabled)||(endTime&&endTime<=time)){notice('Sélectionnez une date et une plage horaire valide.');return;}
+  if(cutoff&&cutoff>date+'T'+heureForm(time)){notice('La clôture doit précéder le début du retrait.');return;}
+  let payload;
+  if(!oldId){payload={action:'slotCreate',date,time,endTime,cutoff,available,active};}
+  else{
+    const original=state.data?.slots?.find(s=>s.id===oldId)||state.data?.slots?.find(s=>s.date===form.dataset.oldDate&&s.time===form.dataset.oldTime);
+    if(!original){notice('Créneau introuvable, actualisez la page.');return;}
+    payload={action:'slot',id:oldId,date:original.date,time:original.time,expected:{}};
+    const changed={newDate:date,newTime:time,endTime,cutoff,available,active};
+    const originalByKey={newDate:original.date,newTime:original.time,endTime:original.endTime||'',cutoff:original.cutoff||'',available:original.available,active:original.active};
+    for(const [key,value] of Object.entries(changed)){
+      if(value===originalByKey[key])continue;
+      payload[key]=value;
+      payload.expected[key==='newDate'?'date':key==='newTime'?'time':key]=originalByKey[key];
+    }
+    if(!Object.keys(payload.expected).length){notice('Aucune modification.');$('#slot-modal').close();return;}
+  }
   if(await mutate(payload)){$('#slot-modal').close();nav('retraits');}
 });
+
 $('#product-form').addEventListener('submit',async e=>{
   e.preventDefault();
   if(state.busy||photoState.busy){notice('Veuillez terminer la préparation de la photo.');return;}

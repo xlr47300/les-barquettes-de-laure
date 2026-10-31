@@ -24,3 +24,14 @@
 #crop-controls[hidden]{display:none!important}
 #crop-controls input[type=range]{width:100%;min-height:44px;accent-color:var(--sage)}
 .photo-empty{display:grid;place-items:center;color:var(--sage);border:1px solid var(--border);border-radius:12px}
+
+/* Gestion des plages horaires de retrait */
+.slot-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+.slot-actions .btn{width:100%;white-space:normal;padding:10px 8px;min-height:43px;font-size:12px}
+.slot-card p{margin:5px 0}
+.slot-card .helper{font-size:11px}
+#slot-edit-info{line-height:1.5}
+#slot-form input[type="datetime-local"]{font-size:16px;min-height:51px;color-scheme:light}
+.slot-open-label{align-self:end;gap:9px;margin-bottom:12px}
+.slot-open-label input{width:18px;min-height:18px}
+@media(max-width:760px){.slot-grid{grid-template-columns:1fr}.slot-actions{grid-template-columns:1fr 1fr}}

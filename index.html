@@ -7,7 +7,7 @@
 <meta name="description" content="Des petits plats maison cuisinés en petites quantités, à retirer près de Villeneuve-sur-Lot.">
 <meta name="theme-color" content="#FBF6EE">
 <link rel="icon" type="image/png" href="uploads/Logo%20les%20barquettes%20de%20Laure.png">
-<script src="./site-data.js?v=stable-5"></script>
+<script src="./site-data.js?v=retraits-1"></script>
 <script src="/laure-order.js?v=stable-5" defer></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="./support.js"></script>
@@ -92,7 +92,7 @@
 
     <sc-if value="{{ ordersClosed }}" hint-placeholder-val="{{ false }}">
       <div role="status" style="max-width:1240px;margin:14px auto 0;padding:14px 18px;border-radius:14px;background:#F4EADC;color:#7A5238;font:500 14px/1.5 'Work Sans'">
-        Le catalogue reste consultable, mais les commandes sont fermées pour le moment : aucun créneau de retrait n'est disponible.
+        Le catalogue reste consultable, mais les commandes sont fermées pour le moment : {{ closedMessage }}
       </div>
     </sc-if>
 
@@ -123,7 +123,7 @@
           <div>
             <span style="font:500 11px/1 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:#8A9078">Prêt à emporter</span>
             <h2 style="{{ h2Style }}">En ce moment chez Laure</h2>
-            <p style="margin:8px 0 0;font:300 15px/1.6 'Work Sans';color:#584C43">Cuisiné cette semaine, en quantités limitées. Ce qui est parti est parti.</p>
+            <p style="margin:8px 0 0;font:300 15px/1.6 'Work Sans';color:#584C43">Plats cuisinés en petites quantités. Réservez à l’avance pour les prochains retraits.</p>
           </div>
           <button onClick="{{ goPlats }}" style="min-height:46px;padding:13px 20px;border-radius:999px;border:1px solid rgba(138,75,42,.25);background:#FBF6EE;color:#8A4B2A;font:500 14px/1 'Work Sans';cursor:pointer" style-hover="background:#F2E7D9">Tous les plats →</button>
         </div>
@@ -268,7 +268,7 @@
             <h3 style="margin:0 0 4px;font:600 17px/1.2 'Petrona',serif;color:#2E2723">Prochains retraits</h3>
             <p style="margin:0 0 14px;font:300 12.5px/1.5 'Work Sans';color:#6B5D53">Les jours et heures réellement proposés par Laure.</p>
             <sc-if value="{{ ordersClosed }}" hint-placeholder-val="{{ false }}">
-              <p style="padding:15px;border-radius:12px;background:#F4EADC;color:#7A5238;font:400 13px/1.5 'Work Sans'">Aucun retrait disponible actuellement. Revenez consulter le prochain menu.</p>
+              <p style="padding:15px;border-radius:12px;background:#F4EADC;color:#7A5238;font:400 13px/1.5 'Work Sans'">Aucun retrait disponible actuellement. Revenez consulter les prochains retraits.</p>
             </sc-if>
             <div style="display:flex;flex-direction:column;gap:10px">
               <sc-for list="{{ retraitsAccueil }}" as="r" hint-placeholder-count="3">
@@ -582,7 +582,7 @@
               </sc-for>
             </div>
             <div style="display:flex;flex-direction:column;gap:9px">
-              <span style="font:500 11px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#A9998C">Créneau de 30 minutes</span>
+              <span style="font:500 11px/1 'Work Sans';letter-spacing:.14em;text-transform:uppercase;color:#A9998C">Plage horaire de retrait</span>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px">
                 <sc-for list="{{ creneaux }}" as="c" hint-placeholder-count="4">
                   <button type="button" onClick="{{ c.select }}" style="{{ c.style }}">{{ c.label }}<span style="font:300 10.5px/1 'Work Sans';opacity:.7">{{ c.restant }}</span></button>
@@ -1108,8 +1108,11 @@ class Component extends DCLogic {
   slotIsOpen(day,slot) {
     const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(new Date());
     const clock=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
-    const match=String(slot.label||'').match(/^([01]?\d|2[0-3])h([0-5]\d)$/);
-    return slot.restant>0&&!!match&&(day.dateRaw>today||(day.dateRaw===today&&match[1].padStart(2,'0')+':'+match[2]>clock));
+    const match=String(slot.start||slot.label||'').match(/^([01]?\d|2[0-3])h([0-5]\d)$/);
+    if(!match||slot.restant<=0)return false;
+    const start=day.dateRaw+'T'+match[1].padStart(2,'0')+':'+match[2];
+    const now=today+'T'+clock;
+    return start>now&&(!slot.cutoff||slot.cutoff>now);
   }
 
   ordersAvailable() {
@@ -1127,7 +1130,7 @@ class Component extends DCLogic {
       'accueil.hero.photo': 'Des recettes préparées en petites quantités.',
       'accueil.selection.surtitre': 'Prêt à emporter',
       'accueil.selection.titre': 'En ce moment chez Laure',
-      'accueil.selection.texte': 'Cuisiné cette semaine, en quantités limitées. Ce qui est parti est parti.',
+      'accueil.selection.texte': 'Plats cuisinés en petites quantités. Réservez à l’avance pour les prochains retraits.',
       'accueil.moments.surtitre': 'Trouver son format',
       'accueil.moments.titre': 'Une barquette pour chaque moment',
       'accueil.formules.surtitre': 'Les formules de Laure',
@@ -1176,7 +1179,7 @@ class Component extends DCLogic {
   nav(route) {
     if(this.state.route==='confirm'&&route!=='confirm')window.LaureOrders?.newRequest();
     if (route === 'commande' && !this.ordersAvailable()) {
-      this.flash('Les commandes sont fermées : aucun créneau de retrait disponible.');
+      this.flash(window.LaureOrders?.isEnabled() ? 'Aucune plage de retrait réservable actuellement.' : 'Les réservations ne sont pas encore activées.');
       return;
     }
     this.setState({ route, drawerOpen:false, sheetId:null });
@@ -1386,7 +1389,7 @@ class Component extends DCLogic {
       const on = j.id === s.jour;
       return { jour:j.jour, date:j.date, plage:j.plage,
         style:'display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-height:88px;padding:14px 16px;border-radius:15px;cursor:pointer;border:1.5px solid ' + (on ? '#C9613F' : 'rgba(138,75,42,.18)') + ';background:' + (on ? '#FBEFE6' : '#FFFDF9') + ';color:#2E2723',
-        select:() => this.setState({ jour:j.id, creneau:(j.creneaux.find(c => c.restant > 0) || {}).id }) };
+        select:() => this.setState({ jour:j.id, creneau:(j.creneaux.find(c => this.slotIsOpen(j,c)) || {}).id }) };
     });
     const creneaux = jourObj.creneaux.map(c => {
       const on = c.id === s.creneau, full = !this.slotIsOpen(jourObj,c);
@@ -1419,11 +1422,12 @@ class Component extends DCLogic {
     return {
       isMobile, isDesktop: !isMobile, showStatusBar: false, delai, logoUrl,
       contactPhone, contactEmail,
-      footerSchedule: JOURS.filter(j => j.creneaux.some(c => c.restant > 0)).map(j => j.jour + ' ' + j.date + ' · ' + j.plage).join(' · ') || 'Prochains horaires de retrait à venir',
+      footerSchedule: JOURS.filter(j => j.creneaux.some(c => this.slotIsOpen(j,c))).map(j => j.jour + ' ' + j.date + ' · ' + j.plage).join(' · ') || 'Prochains horaires de retrait à venir',
       ordersClosed: !this.ordersAvailable(),
-      retraitsAccueil: JOURS.filter(j => j.creneaux.some(c => c.restant > 0)).slice(0, 5).map(j => ({
+      closedMessage:window.LaureOrders?.isEnabled() ? 'aucune plage de retrait n’est actuellement réservable.' : 'les réservations ne sont pas encore activées.',
+      retraitsAccueil: JOURS.filter(j => j.creneaux.some(c => this.slotIsOpen(j,c))).slice(0, 5).map(j => ({
         date: j.jour + ' ' + j.date,
-        horaires: j.creneaux.filter(c => c.restant > 0).map(c => c.label).join(' · ')
+        horaires: j.creneaux.filter(c => this.slotIsOpen(j,c)).map(c => c.label).join(' · ')
       })),
 
       shellOuter: 'width:100%;max-width:1440px;margin:0 auto;background:#FBF6EE',
@@ -1554,7 +1558,7 @@ class Component extends DCLogic {
         if (!formOk || s.sending || !this.ordersAvailable() || !creneauObj || creneauObj.restant <= 0) { this.flash('Informations manquantes ou retrait indisponible'); return; }
         const body = {
           name:s.form.nom.trim(),phone:s.form.tel.trim(),email:s.form.email.trim(),note:s.form.note.trim(),
-          consent:s.form.ok, pickupDate:jourObj.dateRaw, pickupTime:creneauObj.label,
+          consent:s.form.ok, pickupDate:jourObj.dateRaw, pickupTime:creneauObj.start||creneauObj.label,
           items:s.cart.map(l=>({platId:l.platId,variantId:l.variantId,conservation:l.conservation,qty:l.qty}))
         };
         this.setState({sending:true,formError:''});

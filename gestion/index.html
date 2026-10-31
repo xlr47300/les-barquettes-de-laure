@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Petrona:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/gestion/style.css?v=stable-5">
-  <script type="module" src="/gestion/app.js?v=stable-5"></script>
+  <link rel="stylesheet" href="/gestion/style.css?v=retraits-1">
+  <script type="module" src="/gestion/app.js?v=retraits-1"></script>
 </head>
 <body>
 <div class="layout">
@@ -36,10 +36,20 @@
   </form>
 </dialog>
 <dialog id="slot-modal" aria-labelledby="slot-title">
-<form id="slot-form" class="dialog-body"><div class="dialog-head"><h2 id="slot-title">Ouvrir un retrait</h2><button class="close" type="button" data-close="slot-modal">×</button></div>
-<p>Choisissez la date dans le calendrier et l'heure avec le sélecteur. Aucune saisie au format « 17h30 » n'est nécessaire.</p>
-<div class="field-grid"><label>Date de retrait<input type="date" name="date" required></label><label>Heure de retrait<input type="time" name="time" min="06:00" max="23:45" step="900" value="17:30" required></label><label>Nombre de commandes possibles<input type="number" name="available" min="1" max="1000" value="5" required></label></div>
-<div class="dialog-actions"><button type="button" class="btn secondary" data-close="slot-modal">Annuler</button><button type="submit" class="btn primary">Créer le créneau</button></div></form></dialog>
+<form id="slot-form" class="dialog-body">
+<input type="hidden" name="slotId" value="">
+<div class="dialog-head"><h2 id="slot-title">Ouvrir un retrait</h2><button class="close" type="button" data-close="slot-modal">×</button></div>
+<p id="slot-edit-info">Choisissez les horaires et la clôture des réservations.</p>
+<div class="field-grid">
+<label>Date de retrait<input type="date" name="date" required></label>
+<label>Début du retrait<input type="time" name="time" min="06:00" max="23:45" step="900" value="17:30" required></label>
+<label>Fin du retrait<input type="time" name="endTime" min="06:15" max="23:59" step="900" value="19:00" required></label>
+<label>Commandes possibles jusqu’au <input type="datetime-local" name="cutoff" step="60"><span class="helper">Par défaut : veille à 18 h. Laisser vide pour accepter jusqu’au début du retrait.</span></label>
+<label>Places encore disponibles<input type="number" name="available" min="0" max="1000" value="5" required></label>
+<label class="row slot-open-label"><input type="checkbox" name="active" checked> Réservations ouvertes pour ce retrait</label>
+</div>
+<div class="dialog-actions"><button type="button" class="btn secondary" data-close="slot-modal">Annuler</button><button type="submit" class="btn primary" id="save-slot">Créer le créneau</button></div>
+</form></dialog>
 <dialog id="product-modal" aria-labelledby="product-title">
 <form id="product-form" class="dialog-body"><input type="hidden" name="editId" value=""><div class="dialog-head"><h2 id="product-title">Créer une fiche plat</h2><button class="close" type="button" data-close="product-modal">×</button></div>
 <p>Le nouveau plat sera enregistré en brouillon non publié. Vérifier les informations de conservation et d'étiquetage avant de l'activer.</p>
