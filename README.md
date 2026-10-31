@@ -1,3 +1,5 @@
+> Version consolidée : suivre INSTALLATION-STABILISATION.md avant toute installation. Ne pas relancer setupLaure sur une installation existante.
+
 # Les Barquettes de Laure — Site public + Gestion V1
 
 **Version préparée le 30 octobre 2026. Non publiée et non connectée en production.**
@@ -67,7 +69,7 @@ Si le script est modifié plus tard, déployer une **nouvelle version** dans le 
 | `API_SHARED_SECRET` | Secret | **La même valeur** que dans les propriétés Apps Script |
 | `ACCESS_TEAM_DOMAIN` | Variable | Nom du domaine de l'équipe, par ex. `mon-equipe.cloudflareaccess.com` |
 | `ACCESS_AUD` | Variable | AUD exact de l'application Cloudflare Access |
-| `ADMIN_EMAIL` | Variable | Adresse e-mail autorisée de Laure (ou du compte choisi) |
+| `ADMIN_EMAILS` | Variable | Adresses autorisées séparées par des virgules |
 | `TURNSTILE_SITE_KEY` | Variable | Clé publique Turnstile configurée pour le domaine du site |
 | `TURNSTILE_SECRET` | Secret | Clé secrète du même widget Turnstile |
 | `ORDERS_ENABLED` | Variable | `false` pendant l'installation et les essais ; `true` après validation |
@@ -78,7 +80,7 @@ Si le script est modifié plus tard, déployer une **nouvelle version** dans le 
 
 1. Dans Cloudflare **Zero Trust → Access → Applications**, créer une **application Self-hosted**.
 2. Configurer les destinations de l'application pour le domaine public utilisé avec les chemins `/gestion` (et ses sous-chemins) **et** `/api/admin`, avec le **même AUD**. Vérifier la couverture de `/gestion/`.
-3. Créer une politique **Allow** limitée à la seule adresse e-mail `ADMIN_EMAIL` ; identification par code e-mail ou fournisseur d'identité.
+3. Créer une politique **Allow** limitée aux adresses de `ADMIN_EMAILS` ; identification par code e-mail ou fournisseur d'identité.
 4. Récupérer dans Access le **Application Audience (AUD) Tag** et le domaine de l'équipe. Reporter ces deux valeurs dans Cloudflare Pages.
 5. Laisser l'option **Cookie Path Attribute désactivée**, afin que le navigateur puisse transmettre le cookie d'application de `/gestion/` à `/api/admin` sur le même domaine. Un middleware Pages effectue en plus la **vérification cryptographique du JWT**, de l'émetteur, de l'AUD, de sa durée de validité et de l'e-mail.
 6. Tester en navigation privée : **un utilisateur non autorisé ne doit pouvoir accéder ni à `/gestion/`, ni à `/api/admin`**. Tester aussi la protection sur les éventuels domaines de preview Pages.
@@ -136,3 +138,25 @@ node tests/backend.test.cjs
 Pour revenir en arrière, restaurer le **commit précédent** de GitHub/Cloudflare Pages. **Ne pas supprimer** le Google Sheets privé : les commandes déjà prises doivent rester disponibles. Ne pas restaurer aveuglément les stocks d'un ancien fichier de catalogue après des réservations.
 
 Les fichiers fournis ne sont pas déployés automatiquement par cette livraison.
+
+
+## Consolidation locale (base main 969130c97b4751fa1077a312b2dd473fa88014fe)
+
+Voir INSTALLATION-STABILISATION.md et VALIDATION-STABILISATION.md.
+Avant de publier ce backend : lancer UNE FOIS `initialiserStabilisationLaure()`
+dans l’éditeur Apps Script. Cette initialisation idempotente ajoute uniquement
+OPERATIONS dans le classeur PRIVÉ. Ne pas relancer setupLaure, ne pas effacer
+le journal et ne pas modifier les stocks directement dans Sheets ou par un autre script.
+La source canonique est apps-script/Code.gs ; Code.gs à la racine est sa copie
+identique de compatibilité. Un seul de ces codes doit être installé dans Apps Script.
+Une commande déjà Retirée peut être annulée sans aucune restitution de stock/place.
+Le passage à Confirmée n’envoie pas de SMS : Laure contacte elle-même le client.
+
+Tests exclusivement locaux :
+```
+node tests/backend.test.cjs
+node tests/access.test.mjs
+node tests/stabilisation.test.cjs
+node tests/photos.test.cjs
+node tests/public.test.cjs
+```

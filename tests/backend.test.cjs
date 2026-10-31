@@ -38,7 +38,7 @@ const props={CATALOG_SPREADSHEET_ID:'public',PRIVATE_SPREADSHEET_ID:'private',AP
 let emailCount=0;
 const app={
  PropertiesService:{getScriptProperties(){return {getProperty:k=>props[k],setProperty:(k,v)=>props[k]=v};}},
- SpreadsheetApp:{openById:id=>id==='public'?publicBook:privateBook,create:()=>privateBook},
+ SpreadsheetApp:{flush:()=>{},openById:id=>id==='public'?publicBook:privateBook,create:()=>privateBook},
  LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},
  MailApp:{sendEmail:()=>emailCount++},
  Utilities:{formatDate:(d,tz,fmt)=>fmt==='yyyy-MM-dd'?'2026-10-30':fmt==='yyMMdd'?'261030':'2026-10-30T12:00:00',getUuid:()=>crypto.randomUUID()},
@@ -48,7 +48,7 @@ const app={
 vm.createContext(app);
 vm.runInContext(fs.readFileSync('apps-script/Code.gs','utf8'),app);
 const submit=(action,data,secret=props.API_SHARED_SECRET)=>JSON.parse(app.doPost({postData:{contents:JSON.stringify({action,data,secret})}}).getContent());
-assert.equal(app.setupLaure(),'sheet-url');
+assert.equal(app.setupLaure(),'sheet-url');app.initialiserStabilisationLaure();
 const o={name:'Sophie Martin',phone:'0612345678',email:'',pickupDate:'2026-11-03',pickupTime:'17h30',consent:true,requestKey:crypto.randomUUID(),items:[{platId:'lasagnes-maison',variantId:'indiv',conservation:'Frais',qty:3}]};
 const r1=submit('order',o);assert.equal(r1.ok,true,JSON.stringify(r1));assert.equal(r1.data.total,28.5);
 assert.equal(publicBook.getSheetByName('PLATS').rows[4][4],2);

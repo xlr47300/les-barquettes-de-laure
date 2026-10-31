@@ -83,7 +83,7 @@ window.SiteData = (() => {
     const activeRows = rows.filter((row) => !cell(row, "Actif") || yes(cell(row, "Actif")));
     const find = (section, element) => activeRows.find((row) => key(cell(row, "Section")) === key(section) && key(cell(row, "Élément")) === key(element));
     const value = (section, element, column = "Valeur") => cell(find(section, element) || {}, column);
-    const blockFilters = [{ conservation: "Frais" }, {}, { conservation: "Surgelé" }, { format: "Familial" }];
+    const blockFilters = [{ conservation: "Frais" }, {}, { conservation: "Surgelé" }, { format: "2 personnes" }];
     const moments = [1, 2, 3, 4].map((index) => find("BLOCS COMMERCIAUX", `Bloc ${index}`)).filter(Boolean).map((row, index) => ({
       icon: ["assiette", "calendrier", "flocon", "cadeau"][index],
       titre: cell(row, "Valeur"), texte: cell(row, "Texte complémentaire"), lien: cell(row, "Bouton / lien"), filtre: blockFilters[index],
@@ -168,6 +168,8 @@ window.SiteData = (() => {
   function buildJours(rows) {
     const groups = new Map();
     const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris", year:"numeric", month:"2-digit", day:"2-digit" }).format(new Date());
+    const nowClock=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
+    const clock=value=>{const m=String(value||'').match(/^([01]?\d|2[0-3])h([0-5]\d)$/);return m?m[1].padStart(2,'0')+':'+m[2]:'';};
     function toIso(raw) {
       const date = String(raw || "").trim();
       if (/^\d{4}-\d{2}-\d{2}/.test(date)) return date.slice(0, 10);
@@ -177,7 +179,8 @@ window.SiteData = (() => {
     rows.filter((row) => yes(cell(row, "Actif")))
       .map((row) => ({ ...row, _iso: toIso(cell(row, "Date")) }))
       .filter((row) => row._iso && row._iso >= today && number(cell(row, "Places disponibles")) >= 0)
-      .sort((a, b) => a._iso.localeCompare(b._iso) || cell(a, "Heure").localeCompare(cell(b, "Heure")))
+      .filter(row=>clock(cell(row,'Heure'))&&(row._iso>today||clock(cell(row,'Heure'))>nowClock))
+      .sort((a, b) => a._iso.localeCompare(b._iso) || clock(cell(a, "Heure")).localeCompare(clock(cell(b, "Heure"))))
       .forEach((row) => {
         const dateRaw = row._iso;
         const id = slug(`${dateRaw}-${cell(row, "Jour")}`);
@@ -191,7 +194,7 @@ window.SiteData = (() => {
   function buildData(source) {
     const site = buildSite(source.SITE);
     const etapes = [
-      { n: "1", icon: "marmite", titre: "Laure cuisine", texte: "Chaque semaine, je cuisine quelques plats en petite quantité et je publie le menu du lundi." },
+      { n: "1", icon: "marmite", titre: "Laure cuisine", texte: "Je prépare des plats en petite quantité et je mets les disponibilités à jour." },
       { n: "2", icon: "barquettes", titre: "Vous choisissez", texte: "Vous remplissez votre panier, vous choisissez un jour et un créneau de retrait." },
       { n: "3", icon: "message", titre: "Laure confirme", texte: "Je vérifie ce qu'il me reste et je vous confirme par SMS." },
       { n: "4", icon: "main", titre: "Vous récupérez", texte: "Vous passez au créneau choisi, vous payez sur place." },

@@ -1,0 +1,90 @@
+{
+  "repository": "xlr47300/les-barquettes-de-laure",
+  "branch": "main",
+  "base_commit": "969130c97b4751fa1077a312b2dd473fa88014fe",
+  "canonical_apps_script": "apps-script/Code.gs",
+  "root_Code_gs": "copie identique de compatibilite",
+  "migration": "initialiserStabilisationLaure : nouvel onglet OPERATIONS dans le classeur prive, non execute",
+  "files": [
+    {
+      "path": "Code.gs",
+      "sha256": "587fa544d4735bde0055fa4859ccda7132f362baca1065dca09a7945983b0d55",
+      "bytes": 36422
+    },
+    {
+      "path": "INSTALLATION-STABILISATION.md",
+      "sha256": "da6cad8e2a7e3aa460b1ecb379e80cfba7fe27f78a4793fb2876e73328554525",
+      "bytes": 5109
+    },
+    {
+      "path": "README.md",
+      "sha256": "ce694e85c8daafd764e7522d8c1f94e848a10859c42bc3ae10f6e1957130f57e",
+      "bytes": 14201
+    },
+    {
+      "path": "VALIDATION-STABILISATION.md",
+      "sha256": "5031c406a3aa11ab20feff5b12355584321c2f43c241909aa3d67c7e6e78c98c",
+      "bytes": 7845
+    },
+    {
+      "path": "apps-script/Code.gs",
+      "sha256": "587fa544d4735bde0055fa4859ccda7132f362baca1065dca09a7945983b0d55",
+      "bytes": 36422
+    },
+    {
+      "path": "gestion/app.js",
+      "sha256": "517f365befacec7375a35442c0407e1878ccb85aa16870c0a69fd0e4392788e7",
+      "bytes": 31629
+    },
+    {
+      "path": "gestion/index.html",
+      "sha256": "27c1698a43624e868a24013bb7be2fd8ff5651ebe05eb915abf660697357cb0b",
+      "bytes": 8560
+    },
+    {
+      "path": "gestion/style.css",
+      "sha256": "9bd880e55c25f1c30ff0dcf50ee1e8c35504917d83b2e4ab181c178380e6c3f2",
+      "bytes": 10698
+    },
+    {
+      "path": "index.html",
+      "sha256": "5a315a3fdbcc15a74f6d8201a75fd3897b02a75429ffdecaa87576982b668b9d",
+      "bytes": 130354
+    },
+    {
+      "path": "laure-order.js",
+      "sha256": "3db6eb95afb09a810ea1c2c1b803df0061f7eab4a43cabcf9beb4d00fdb7e105",
+      "bytes": 2908
+    },
+    {
+      "path": "site-data.js",
+      "sha256": "5d599fb5347ed8c0549fd5fb11037298dc1f2586a8f09f9ec70d250ccee893b8",
+      "bytes": 12869
+    },
+    {
+      "path": "tests/access.test.mjs",
+      "sha256": "e79887f398ee3c61252d89dbbacbcadc220afc0cdff67bd7c4c732aafbae6a5e",
+      "bytes": 2452
+    },
+    {
+      "path": "tests/backend.test.cjs",
+      "sha256": "3a4c7b3f2f2de01e1bd44899f7380f826581372dc695e91344ae6b2a6c49c92c",
+      "bytes": 5107
+    },
+    {
+      "path": "tests/photos.test.cjs",
+      "sha256": "dce583aae4130320b1ff4e552ed2470ce7e1bc3e42437a3ae519bdc208b3aa04",
+      "bytes": 5087
+    },
+    {
+      "path": "tests/public.test.cjs",
+      "sha256": "857b9931965cc3928d62840f4a682a72c9eb9b287a58d1c6c959510eacae7617",
+      "bytes": 4586
+    },
+    {
+      "path": "tests/stabilisation.test.cjs",
+      "sha256": "8f6d4a451ee91d1b9816cbefed8813d60dd510aafa3dac22af849978a05e0438",
+      "bytes": 5931
+    }
+  ]
+}

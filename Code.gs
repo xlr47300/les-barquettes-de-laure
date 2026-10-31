@@ -57,7 +57,7 @@ function doPost(e) {
     switch(data.action){
       case 'order': result=createOrder_(data.data,false);break;
       case 'manualOrder': result=createOrder_(data.data,true);break;
-      case 'snapshot': result=snapshot_();break;
+      case 'snapshot': result=withLock_(()=>snapshot_());break;
       case 'status': result=changeStatus_(data.data);break;
       case 'payment': result=changePayment_(data.data);break;
       case 'product': result=editProduct_(data.data);break;
@@ -86,7 +86,7 @@ function privateBook_(){return SpreadsheetApp.openById(prop_('PRIVATE_SPREADSHEE
 function withLock_(fn){
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(25000)) fail_('Service occupé, réessayer',503);
-  try{return fn();}finally{lock.releaseLock();}
+  try{resumeOperations_();return fn();}finally{try{SpreadsheetApp.flush();}finally{lock.releaseLock();}}
 }
 function clean_(value,max){
   if(value==null)return '';
@@ -151,13 +151,13 @@ function createOrder_(input,manual){
     if(!manual && input.consent!==true)fail_('Acceptation de la demande requise');
     const requestKey=clean_(input.requestKey,90);
     if(!/^[a-zA-Z0-9-]{12,90}$/.test(requestKey))fail_('Référence de demande manquante');
+    const book=privateBook_(),orders=readPrivate_(book,'COMMANDES');
+    const existing=orders.items.find(o=>o['Clé de requête']===requestKey);
+    if(existing)return {orderId:existing.ID,total:numeric_(existing['Total TTC']),duplicate:true,items:receiptItems_(existing.ID)};
     const date=clean_(input.pickupDate,20),time=clean_(input.pickupTime,30);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<today_())fail_('Date de retrait invalide');
     const cart=input.items;
     if(!Array.isArray(cart)||cart.length===0||cart.length>20)fail_('Panier incorrect');
-    const book=privateBook_(),orders=readPrivate_(book,'COMMANDES');
-    const existing=orders.items.find(o=>o['Clé de requête']===requestKey);
-    if(existing)return {orderId:existing.ID,total:numeric_(existing['Total TTC']),duplicate:true};
     const slotData=sourceData_('CRÉNEAUX');
     const slot=slotData.items.find(s=>yes_(s.Actif)&&dateISO_(s.Date)===date&&clean_(s.Heure,30)===time);
     if(!slot || numeric_(slot['Places disponibles'])<1)fail_('Ce créneau n’est plus disponible');
@@ -165,23 +165,14 @@ function createOrder_(input,manual){
     if(!clock)fail_('Heure de retrait incorrecte');
     const slotClock=clock[1].padStart(2,'0')+':'+clock[2];
     if(date===today_()&&slotClock<=Utilities.formatDate(new Date(),'Europe/Paris','HH:mm'))fail_('Ce créneau est déjà passé');
-    const plats=sourceData_('PLATS'),formules=sourceData_('FORMULES');
+    const plats=sourceData_('PLATS');
     const wanted=new Map(),lines=[];
     let totalCents=0;
     for(const item of cart){
       if(!item || typeof item!=='object')fail_('Ligne incorrecte');
       const itemId=clean_(item.platId,150),variant=clean_(item.variantId,20),qty=Number(item.qty);
       if(!Number.isInteger(qty)||qty<1||qty>30)fail_('Quantité incorrecte');
-      if(variant==='formule'){
-        fail_('Les formules ne sont pas encore ouvertes à la réservation en ligne.');
-        const f=formules.items.find(f=>yes_(f.Actif)&&'formule-'+slug_(f.Nom||f['ID formule'])===itemId);
-        if(!f)fail_('Formule indisponible');
-        const price=Math.round(numeric_(f['Prix TTC'])*100);
-        if(price<1)fail_('Prix de formule invalide');
-        totalCents+=price*qty;
-        lines.push({id:itemId,name:clean_(f.Nom,150),variant:'formule',label:'Formule',conservation:'À confirmer',qty,price,stock:false});
-        continue;
-      }
+      if(variant==='formule')fail_('Les formules ne sont pas ouvertes à la réservation en ligne.');
       if(!LAURE.variants[variant])fail_('Format non reconnu');
       if(!manual && variant==='fam')fail_('Ce format est temporairement indisponible');
       const p=plats.items.find(p=>yes_(p.Actif)&&slug_(p['Nom du plat'])===itemId);
@@ -209,34 +200,18 @@ function createOrder_(input,manual){
     for(const w of wanted.values())if(w.initial<w.qty)fail_('Stock insuffisant : '+w.p['Nom du plat']);
     const slotBefore=numeric_(slot['Places disponibles']);
     const orderId='L-'+Utilities.formatDate(new Date(),'Europe/Paris','yyMMdd')+'-'+Utilities.getUuid().slice(0,10).toUpperCase();
-    let orderRow=0,lineStart=0;
-    const restored=[];
-    try{
-      for(const w of wanted.values()){
-        updateCell_(plats,w.p._row,w.stockCol,w.initial-w.qty);
-        restored.push(w);
-      }
-      updateCell_(slotData,slot._row,'Places disponibles',slotBefore-1);
-      const order=[orderId,nowISO_(),safeCell_(name,100),safeCell_(phone,30),safeCell_(email,150),date,time,'À confirmer','Non réglée',totalCents/100,manual?'Manuelle':'Site',safeCell_(note,700),requestKey];
-      orderRow=orders.sheet.getLastRow()+1;
-      orders.sheet.getRange(orderRow,1,1,order.length).setValues([order]);
-      const lineSheet=book.getSheetByName('LIGNES');
-      const values=lines.map(l=>[orderId,l.id,l.name,l.variant,l.label,l.conservation,l.qty,l.price/100,l.qty*l.price/100,l.stock?'Oui':'Non']);
-      lineStart=lineSheet.getLastRow()+1;
-      lineSheet.getRange(lineStart,1,values.length,values[0].length).setValues(values);
-      appendJournal_(book,orderId,'Création',manual?'Saisie manuelle':'Demande site');
-    }catch(e){
-      // Compensation best-effort : Sheets ne fournit pas de transaction multi-feuilles.
-      try{
-        for(const w of restored)updateCell_(plats,w.p._row,w.stockCol,w.initial);
-        updateCell_(slotData,slot._row,'Places disponibles',slotBefore);
-        if(lineStart){const ls=book.getSheetByName('LIGNES');for(let j=ls.getLastRow();j>=lineStart;j--)if(ls.getRange(j,1).getValue()===orderId)ls.deleteRow(j);}
-        if(orderRow&&orders.sheet.getRange(orderRow,1).getValue()===orderId)orders.sheet.deleteRow(orderRow);
-      }catch(rollbackError){console.error('RÉCONCILIATION MANUELLE REQUISE',rollbackError);}
-      throw e;
-    }
+    const steps=[];
+    for(const w of wanted.values())steps.push(dataWrite_(plats,w.p._row,w.stockCol,w.initial-w.qty));
+    steps.push(dataWrite_(slotData,slot._row,'Places disponibles',slotBefore-1));
+    const order=[orderId,nowISO_(),safeCell_(name,100),safeCell_(phone,30),safeCell_(email,150),date,time,'À confirmer','Non réglée',totalCents/100,manual?'Manuelle':'Site',safeCell_(note,700),requestKey];
+    steps.push(plannedWrite_('private','COMMANDES',orders.sheet.getLastRow()+1,1,[order]));
+    const lineSheet=book.getSheetByName('LIGNES');
+    const values=lines.map(l=>[orderId,l.id,l.name,l.variant,l.label,l.conservation,l.qty,l.price/100,l.qty*l.price/100,l.stock?'Oui':'Non']);
+    steps.push(plannedWrite_('private','LIGNES',lineSheet.getLastRow()+1,1,values));
+    steps.push(journalStep_(book,orderId,'Création',manual?'Saisie manuelle':'Demande site'));
+    commitOperation_('order-'+requestKey,steps);
     notifyLaure_(orderId,name,phone,date,time,lines,totalCents/100);
-    return {orderId,total:totalCents/100,duplicate:false};
+    return {orderId,total:totalCents/100,duplicate:false,items:receiptItems_(orderId)};
   });
 }
 function notifyLaure_(id,name,phone,date,time,lines,total){
@@ -258,7 +233,7 @@ function snapshot_(){
   orderLines_(book).forEach(line=>{const id=line['Commande ID'];if(!lineMap.has(id))lineMap.set(id,[]);
     lineMap.get(id).push({platId:line['Plat ID'],name:line.Plat,variant:line['Format ID'],label:line.Format,conservation:line.Conservation,qty:numeric_(line['Quantité']),price:numeric_(line['Prix unitaire TTC']),stock:line['Stock suivi']==='Oui'});});
   const prepared=orders.map(o=>({id:o.ID,created:o['Créée le'],name:o.Nom,phone:o['Téléphone'],email:o.Email,
-    pickupDate:o['Date retrait'],pickupTime:o['Heure retrait'],status:o.Statut,payment:o.Paiement,
+    pickupDate:dateISO_(o['Date retrait']),pickupTime:o['Heure retrait'],status:o.Statut,payment:o.Paiement,
     total:numeric_(o['Total TTC']),source:o.Origine,note:o.Note,lines:lineMap.get(o.ID)||[]}))
     .sort((a,b)=>a.pickupDate.localeCompare(b.pickupDate)||a.pickupTime.localeCompare(b.pickupTime));
   const plats=sourceData_('PLATS');
@@ -283,8 +258,10 @@ function findOrder_(book,id){
 function changeStatus_(input){return withLock_(()=>{
   const status=clean_(input.status,40);if(!LAURE.states.includes(status))fail_('Statut inconnu');
   const book=privateBook_(),{data,o}=findOrder_(book,input.id),previous=o.Statut;
+  if(previous==='Retirée'&&!['Retirée','Annulée'].includes(status))fail_('Une commande retirée ne peut pas revenir en préparation.');
   if(previous==='Annulée'&&status!=='Annulée')fail_('Une commande annulée ne peut pas être réactivée : créer une nouvelle commande');
-  if(status==='Annulée'&&previous!=='Annulée'){
+  const steps=[];
+  if(status==='Annulée'&&previous!=='Annulée'&&previous!=='Retirée'){
     const products=sourceData_('PLATS'),slots=sourceData_('CRÉNEAUX');
     const changes=new Map();
     orderLines_(book).filter(line=>line['Commande ID']===o.ID&&line['Stock suivi']==='Oui').forEach(l=>{
@@ -295,20 +272,21 @@ function changeStatus_(input){return withLock_(()=>{
       if(!changes.has(key))changes.set(key,{p,col:v[2],n:0});
       changes.get(key).n+=numeric_(l['Quantité']);
     });
-    const slot=slots.items.find(s=>dateISO_(s.Date)===o['Date retrait']&&s.Heure===o['Heure retrait']);
+    const slot=slots.items.find(s=>dateISO_(s.Date)===dateISO_(o['Date retrait'])&&s.Heure===o['Heure retrait']);
     if(!slot)fail_('Créneau de retrait introuvable : correction manuelle requise.');
-    for(const c of changes.values())updateCell_(products,c.p._row,c.col,numeric_(c.p[c.col])+c.n);
-    updateCell_(slots,slot._row,'Places disponibles',numeric_(slot['Places disponibles'])+1);
+    for(const c of changes.values())steps.push(dataWrite_(products,c.p._row,c.col,numeric_(c.p[c.col])+c.n));
+    steps.push(dataWrite_(slots,slot._row,'Places disponibles',numeric_(slot['Places disponibles'])+1));
   }
-  updateCell_(data,o._row,'Statut',status);
-  appendJournal_(book,o.ID,'Statut',previous+' → '+status);
+  if(previous===status)return {id:o.ID,status};
+  steps.push(dataWrite_(data,o._row,'Statut',status,'private'));
+  steps.push(journalStep_(book,o.ID,'Statut',previous+' → '+status+(previous==='Retirée'&&status==='Annulée'?' (sans restitution)':'')));
+  commitOperation_('status-'+Utilities.getUuid(),steps);
   return {id:o.ID,status};
 });}
 function changePayment_(input){return withLock_(()=>{
   const payment=clean_(input.payment,40);if(!LAURE.payments.includes(payment))fail_('Règlement non reconnu');
   const book=privateBook_(),{data,o}=findOrder_(book,input.id);
-  updateCell_(data,o._row,'Paiement',payment);
-  appendJournal_(book,o.ID,'Paiement',payment);
+  commitOperation_('payment-'+Utilities.getUuid(),[dataWrite_(data,o._row,'Paiement',payment,'private'),journalStep_(book,o.ID,'Paiement',payment)]);
   return {id:o.ID,payment};
 });}
 function editProduct_(input){return withLock_(()=>{
@@ -322,7 +300,7 @@ function editProduct_(input){return withLock_(()=>{
   if(fields.image&&!/^https:\/\//i.test(clean_(fields.image,400)))fail_('Lien image incorrect');
   if(fields.conservation&&!['Frais','Sous vide','Surgelé'].includes(clean_(fields.conservation,50)))fail_('Conservation incorrecte');
   for(const [key,[col,max]] of Object.entries(detailFields)){
-    if(Object.prototype.hasOwnProperty.call(fields,key))pending.push([col,safeCell_(fields[key],max)]);
+    if(Object.prototype.hasOwnProperty.call(fields,key)){expectedCell_(input,key,data,p._row,col);pending.push([col,safeCell_(fields[key],max)]);}
   }
   // Valider toute la fiche avant la première écriture : aucune modification partielle
   // ne doit être causée par une règle de publication, de prix ou de stock.
@@ -331,34 +309,38 @@ function editProduct_(input){return withLock_(()=>{
       !clean_(fields.allergens??p['Allergènes'],500)||
       !clean_(fields.dlc??p['DLC / conservation'],300)))
     fail_('Compléter ingrédients, allergènes et DLC/conservation avant publication');
-  if(typeof input.active==='boolean')pending.push(['Actif',input.active?'Oui':'Non']);
+  if(typeof input.active==='boolean'){expectedCell_(input,'active',data,p._row,'Actif','bool');pending.push(['Actif',input.active?'Oui':'Non']);}
   const variant=clean_(input.variant,20);
   if(variant){
     if(!LAURE.variants[variant])fail_('Format inconnu');
     const [on,price,stock]=LAURE.variants[variant];
     if(input.price!==undefined){
+      expectedCell_(input,'price',data,p._row,price,'number');
       const v=Number(input.price);
       if(!Number.isFinite(v)||v<0||v>1000)fail_('Prix incorrect');
       pending.push([price,Math.round(v*100)/100]);
     }
     if(input.stock!==undefined){
+      expectedCell_(input,'stock',data,p._row,stock,'number');
       const v=Number(input.stock);
       if(!Number.isInteger(v)||v<0||v>9999)fail_('Stock incorrect');
       pending.push([stock,v]);
     }
-    if(typeof input.variantActive==='boolean')pending.push([on,input.variantActive?'Oui':'Non']);
+    if(typeof input.variantActive==='boolean'){expectedCell_(input,'variantActive',data,p._row,on,'bool');pending.push([on,input.variantActive?'Oui':'Non']);}
   }
   // S'assurer que toutes les colonnes existent avant de modifier la feuille.
   pending.forEach(([column])=>idx_(data,column));
-  pending.forEach(([column,value])=>updateCell_(data,p._row,column,value));
+  if(pending.length)commitOperation_('product-'+Utilities.getUuid(),pending.map(([column,value])=>dataWrite_(data,p._row,column,value)));
   return {updated:true};
 });}
 function editSlot_(input){return withLock_(()=>{
   const data=sourceData_('CRÉNEAUX');
   const slot=data.items.find(s=>dateISO_(s.Date)===clean_(input.date,20)&&s.Heure===clean_(input.time,30));
   if(!slot)fail_('Créneau non trouvé',404);
-  if(input.available!==undefined){const n=Number(input.available);if(!Number.isInteger(n)||n<0||n>1000)fail_('Nombre de places incorrect');updateCell_(data,slot._row,'Places disponibles',n);}
-  if(typeof input.active==='boolean')updateCell_(data,slot._row,'Actif',input.active?'Oui':'Non');
+  const steps=[];
+  if(input.available!==undefined){expectedCell_(input,'available',data,slot._row,'Places disponibles','number');const n=Number(input.available);if(!Number.isInteger(n)||n<0||n>1000)fail_('Nombre de places incorrect');steps.push(dataWrite_(data,slot._row,'Places disponibles',n));}
+  if(typeof input.active==='boolean'){expectedCell_(input,'active',data,slot._row,'Actif','bool');steps.push(dataWrite_(data,slot._row,'Actif',input.active?'Oui':'Non'));}
+  if(steps.length)commitOperation_('slot-'+Utilities.getUuid(),steps);
   return {updated:true};
 });}
 
@@ -422,7 +404,9 @@ function laurePhotosFolder_(){
   const parent=parents.hasNext()?parents.next():DriveApp.getRootFolder();
   const title='Photos des plats - Les Barquettes de Laure';
   const matches=parent.getFoldersByName(title);
-  const folder=matches.hasNext()?matches.next():parent.createFolder(title);
+  if(!matches.hasNext())fail_('Dossier photos introuvable : renseigner LAURE_PHOTOS_FOLDER_ID.',503);
+  const folder=matches.next();
+  if(matches.hasNext())fail_('Plusieurs dossiers photos : renseigner LAURE_PHOTOS_FOLDER_ID.',503);
   props.setProperty('LAURE_PHOTOS_FOLDER_ID',folder.getId());
   return folder;
 }
@@ -447,7 +431,7 @@ function cleanupOldPhoto_(oldUrl,folder){
   if(!oldId)return;
   try{
     const data=sourceData_('PLATS');
-    if(data.items.some(p=>driveId_(p['Photo principale URL Google Drive'])===oldId))return;
+    if(data.items.some(p=>Object.keys(p).some(key=>/photo/i.test(key)&&driveId_(p[key])===oldId)))return;
     const file=DriveApp.getFileById(oldId);
     if(isInLaureFolder_(file,folder))file.setTrashed(true);
   }catch(err){console.warn('Ancienne photo conservée : '+err.message);}
@@ -463,35 +447,151 @@ function uploadProductPhoto_(input){return withLock_(()=>{
   const {data,product}=productById_(input.id);
   const folder=laurePhotosFolder_();
   const oldUrl=product['Photo principale URL Google Drive']||'';
-  const filename='Plat '+slug_(product['Nom du plat'])+' '+Utilities.formatDate(new Date(),'Europe/Paris','yyyyMMdd-HHmmss')+'.jpg';
-  const file=folder.createFile(Utilities.newBlob(bytes,'image/jpeg',filename));
-  let saved=false;
-  try{
-    // Un lien public de consultation pour cette photo uniquement.
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
-    const url='https://drive.google.com/file/d/'+file.getId()+'/view';
-    updateCell_(data,product._row,'Photo principale URL Google Drive',url);
-    saved=true;
-    cleanupOldPhoto_(oldUrl,folder);
-    return {uploaded:true,image:url};
-  }finally{
-    if(!saved){try{file.setTrashed(true);}catch(err){console.warn(err);}}
+  const token=clean_(input.requestKey,90);
+  if(!/^[a-zA-Z0-9-]{12,90}$/.test(token))fail_('Référence photo absente');
+  const filename='laure-'+token+'.jpg';
+  if(oldUrl){
+    try{
+      const current=DriveApp.getFileById(driveId_(oldUrl));
+      if(isInLaureFolder_(current,folder)&&current.getName()===filename){
+        cleanupOldPhoto_(input.expectedImage,folder);return {uploaded:true,image:oldUrl,duplicate:true};
+      }
+    }catch(e){if(e.status)throw e;}
   }
+  if(typeof input.expectedImage!=='string'||oldUrl!==input.expectedImage)fail_('La photo a changé. Actualisez la fiche avant de réessayer.',409);
+  const matches=folder.getFilesByName(filename);
+  const file=matches.hasNext()?matches.next():folder.createFile(Utilities.newBlob(bytes,'image/jpeg',filename));
+  // Conserver un fichier dont la réponse a été perdue permet une reprise sans doublon.
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,DriveApp.Permission.VIEW);
+  const url='https://drive.google.com/file/d/'+file.getId()+'/view';
+  updateCell_(data,product._row,'Photo principale URL Google Drive',url);
+  SpreadsheetApp.flush();
+  cleanupOldPhoto_(oldUrl,folder);
+  return {uploaded:true,image:url};
 });}
 function deleteProductPhoto_(input){return withLock_(()=>{
   const {data,product}=productById_(input.id);
   const oldUrl=product['Photo principale URL Google Drive']||'';
-  if(!oldUrl)return {deleted:false};
+  if(!oldUrl)return {deleted:true};
+  if(typeof input.expectedImage!=='string'||input.expectedImage!==oldUrl)fail_('La photo a changé. Actualisez la fiche avant de la retirer.',409);
   const folder=laurePhotosFolder_();
   updateCell_(data,product._row,'Photo principale URL Google Drive','');
+  SpreadsheetApp.flush();
   // Ne place jamais à la corbeille une photo extérieure au dossier géré.
   cleanupOldPhoto_(oldUrl,folder);
   return {deleted:true};
 });}
 
-/** À exécuter UNE FOIS dans l'éditeur Apps Script pour autoriser Drive et créer le dossier. */
+/** À exécuter UNE FOIS dans l'éditeur Apps Script pour autoriser Drive et vérifier le dossier existant. */
 function initialiserPhotosLaure(){
   const folder=laurePhotosFolder_();
   Logger.log('Dossier photos créé ou retrouvé : '+folder.getUrl());
   return folder.getUrl();
+}
+
+// Journal privé de reprise. Ne jamais modifier ou trier OPERATIONS manuellement.
+const OP_HEADERS=['ID','Opération JSON'];
+function initialiserStabilisationLaure(){
+  const lock=LockService.getScriptLock();if(!lock.tryLock(25000))fail_('Service occupé',503);
+  try{
+    const book=privateBook_();let sheet=book.getSheetByName('OPERATIONS');
+    if(!sheet)sheet=book.insertSheet('OPERATIONS');
+    if(sheet.getLastRow()===0)sheet.getRange(1,1,1,2).setValues([OP_HEADERS]);
+    if(sheet.getRange(1,1,1,2).getDisplayValues()[0].join('|')!==OP_HEADERS.join('|'))fail_('Structure OPERATIONS inattendue : aucune donnée écrasée',503);
+    SpreadsheetApp.flush();return {ready:true};
+  }finally{lock.releaseLock();}
+}
+function operationsSheet_(){
+  const s=privateBook_().getSheetByName('OPERATIONS');
+  if(!s||s.getRange(1,1,1,2).getDisplayValues()[0].join('|')!==OP_HEADERS.join('|'))
+    fail_('Initialisation requise : lancer initialiserStabilisationLaure dans Apps Script.',503);
+  return s;
+}
+function sameValue_(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+function plannedWrite_(book,sheet,row,col,after){
+  const target=(book==='catalog'?catalog_():privateBook_()).getSheetByName(sheet);
+  if(!target)fail_('Feuille absente : '+sheet,503);
+  ensureCapacity_(target,row+after.length-1,col+after[0].length-1);
+  const before=target.getRange(row,col,after.length,after[0].length).getValues();
+  // Aucun objet Date ou formule à réécrire dans les champs de gestion.
+  const normal=values=>JSON.parse(JSON.stringify(values));
+  const anchors=[];
+  if(book==='catalog'&&row>4&&['PLATS','CRÉNEAUX'].includes(sheet)){
+    const headers=target.getRange(4,1,1,target.getLastColumn()).getDisplayValues()[0];
+    for(const key of (sheet==='PLATS'?['Nom du plat']:['Date','Heure'])){
+      const anchorCol=headers.indexOf(key)+1;if(anchorCol<1)fail_('Identité de ligne absente : '+key,503);
+      anchors.push({row,col:anchorCol,value:normal([[target.getRange(row,anchorCol).getValue()]])[0][0]});
+    }
+  }
+  return {book,sheet,row,col,before:normal(before),after:normal(after),anchors};
+}
+function dataWrite_(data,row,column,value,book='catalog'){
+  return plannedWrite_(book,data.sheet.getName(),row,idx_(data,column),[[value]]);
+}
+function runOperation_(sheet,row,op){
+  for(const step of op.steps){
+    const book=step.book==='catalog'?catalog_():privateBook_();
+    const target=book.getSheetByName(step.sheet);
+    if(!target)fail_('Reprise bloquée : feuille manquante. Contacter le support.',503);
+    for(const anchor of step.anchors||[]){
+      if(!sameValue_(JSON.parse(JSON.stringify(target.getRange(anchor.row,anchor.col).getValue())),anchor.value))fail_('Reprise bloquée : une ligne a été déplacée ou renommée.',503);
+    }
+    const range=target.getRange(step.row,step.col,step.after.length,step.after[0].length);
+    const values=JSON.parse(JSON.stringify(range.getValues()));
+    // Une reprise accepte seulement les valeurs prévues avant OU après écriture.
+    // Les autres écritures de l'application attendent cette reprise, sous le même verrou.
+    for(let i=0;i<values.length;i++)for(let j=0;j<values[i].length;j++){
+      if(!sameValue_(values[i][j],step.before[i][j])&&!sameValue_(values[i][j],step.after[i][j]))
+        fail_('Reprise bloquée : données modifiées hors opération. Ne pas réessayer de corriger le stock manuellement ; contacter le support.',503);
+    }
+    if(!sameValue_(values,step.after)){range.setValues(step.after);SpreadsheetApp.flush();}
+  }
+  op.state='done';sheet.getRange(row,2).setValue(JSON.stringify(op));SpreadsheetApp.flush();
+}
+function resumeOperations_(){
+  const sheet=operationsSheet_();const n=sheet.getLastRow()-1;if(n<1)return;
+  const rows=sheet.getRange(2,1,n,2).getValues();
+  for(let i=0;i<rows.length;i++){
+    if(!rows[i][0])continue;
+    let op;try{op=JSON.parse(rows[i][1]);}catch(e){fail_('Journal technique illisible : contacter le support.',503);}
+    if(op.id!==rows[i][0]||!Array.isArray(op.steps)||!['pending','done'].includes(op.state))fail_('Journal technique incohérent',503);
+    if(op.state==='pending')runOperation_(sheet,i+2,op);
+  }
+}
+function commitOperation_(id,steps){
+  const sheet=operationsSheet_();
+  const op={id,state:'pending',created:nowISO_(),steps};const json=JSON.stringify(op);
+  if(json.length>45000)fail_('Opération trop volumineuse',422);
+  const row=sheet.getLastRow()+1;
+  ensureCapacity_(sheet,row,2);
+  sheet.getRange(row,1,1,2).setValues([[id,json]]);SpreadsheetApp.flush();
+  runOperation_(sheet,row,op);
+}
+function journalStep_(book,id,action,detail){
+  const sheet=book.getSheetByName('JOURNAL');
+  return plannedWrite_('private','JOURNAL',sheet.getLastRow()+1,1,[[nowISO_(),id,action,clean_(detail,500)]]);
+}
+function expectedCell_(input,key,data,row,column,kind='text'){
+  const col=idx_(data,column),current=data.sheet.getRange(row,col).getValue();
+  const normalize=v=>kind==='number'?numeric_(v):kind==='bool'?yes_(v):String(v??'');
+  if(!input.expected||!Object.prototype.hasOwnProperty.call(input.expected,key)||!sameValue_(normalize(current),normalize(input.expected[key])))
+    fail_('Ces données ont changé ou cette page est ancienne. Actualisez avant de réessayer.',409);
+}
+
+function ensureCapacity_(sheet,lastRow,lastColumn){
+  if(typeof sheet.getMaxRows==='function'&&sheet.getMaxRows()<lastRow)sheet.insertRowsAfter(sheet.getMaxRows(),lastRow-sheet.getMaxRows());
+  if(typeof sheet.getMaxColumns==='function'&&sheet.getMaxColumns()<lastColumn)sheet.insertColumnsAfter(sheet.getMaxColumns(),lastColumn-sheet.getMaxColumns());
+}
+// Diagnostic en lecture seule, utilisable avant une marche arrière. Ne reprend aucune écriture.
+function etatStabilisationLaure(){
+  const sheet=operationsSheet_();const n=sheet.getLastRow()-1;
+  const pending=n<1?[]:sheet.getRange(2,1,n,2).getValues().filter(row=>row[0]&&JSON.parse(row[1]).state!=='done').map(row=>row[0]);
+  Logger.log(JSON.stringify({pending}));return {pending};
+}
+
+function receiptItems_(orderId){
+  return orderLines_(privateBook_()).filter(line=>line['Commande ID']===orderId).map(line=>({
+    name:line.Plat,variantLabel:line.Format,conservation:line.Conservation,
+    qty:numeric_(line['Quantité']),unitPrice:numeric_(line['Prix unitaire TTC']),lineTotal:numeric_(line['Montant TTC'])
+  }));
 }

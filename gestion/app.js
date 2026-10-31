@@ -14,14 +14,14 @@ async function api(payload){
   return body;
 }
 async function refresh(silent=false){
-  try{const result=await api();state.data=result;$('#updated').textContent='Actualisé '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});render();if(!silent)notice('Données actualisées');}
-  catch(error){$('#main').innerHTML=`<div class="error"><b>Chargement impossible</b><p>${esc(error.message)}</p><p class="helper">Vérifier Cloudflare Access, le lien Apps Script et les autorisations Google.</p></div>`;}
+  try{const result=await api();state.data=result;$('#updated').textContent='Actualisé '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});render();if(!silent)notice('Données actualisées');return true;}
+  catch(error){$('#main').innerHTML=`<div class="error"><b>Chargement impossible</b><p>${esc(error.message)}</p><p class="helper">Vérifier Cloudflare Access, le lien Apps Script et les autorisations Google.</p></div>`;return false;}
 }
 async function mutate(payload){
   if(state.busy)return;
   state.busy=true;
-  try{await api(payload);await refresh(true);notice('Modification enregistrée');return true;}
-  catch(error){notice(error.message);return false;}
+  try{await api(payload);const refreshed=await refresh(true);notice(refreshed?'Modification enregistrée':'Enregistré ; actualisation impossible. Réessayez Actualiser.');return true;}
+  catch(error){await refresh(true);notice(error.message);return false;}
   finally{state.busy=false;}
 }
 function label(title,subtitle=''){return `<div class="section-title"><h2>${esc(title)}</h2>${subtitle?`<span class="muted short">${esc(subtitle)}</span>`:''}</div>`;}
@@ -57,7 +57,7 @@ function production(date){
   return [...grouped.values()].sort((a,b)=>a.name.localeCompare(b.name,'fr'));
 }
 function renderKitchen(){
-  const days=dateOptions().filter(d=>d>=new Date().toISOString().slice(0,10)).slice(0,14);
+  const days=dateOptions().filter(d=>d>=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'})).slice(0,14);
   if(!days.length)return '<div class="empty">Aucun créneau de production à venir.</div>';
   return `<div class="notice">Les quantités regroupent les demandes à confirmer et les commandes confirmées restant à préparer. Les commandes prêtes, retirées ou annulées sont exclues.</div>${days.map(day=>{
     const list=production(day);
@@ -93,9 +93,10 @@ function photoUrl(value){
   if(match)return `https://lh3.googleusercontent.com/d/${match[1]}=w800`;
   return /^https:\/\//.test(url)?url:'';
 }
-const photoState={base64:'',preview:'',busy:false};
+let photoJob=0;
+const photoState={base64:'',preview:'',busy:false,key:'',expectedImage:''};
 function resetPhoto(product){
-  photoState.base64='';photoState.preview='';photoState.busy=false;
+  photoJob++;clearCrop();photoState.base64='';photoState.preview='';photoState.busy=false;photoState.key='';photoState.expectedImage=product?.image||'';
   $('#photo-preview').src=product?.image?photoUrl(product.image):'';
   $('#photo-preview').hidden=!product?.image;
   $('#photo-help').textContent=product?.image?'Photo actuellement enregistrée. Vous pouvez la remplacer.':'Aucune photo. Choisissez ou prenez une photo.';
@@ -109,32 +110,58 @@ function toggleDuoFields(){
   $('#duo-active').closest('.duo-toggle').hidden=!isNew;
   document.querySelectorAll('.duo-input').forEach(el=>el.hidden=!isNew);
 }
-async function compressPhoto(file){
-  if(!file||file.size>20_000_000)throw Error('Photo trop volumineuse (20 Mo maximum avant réduction).');
-  const objectUrl=URL.createObjectURL(file);
-  try{
-    const img=new Image();
-    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('Photo illisible. Utilisez une image JPEG ou convertissez votre photo HEIC en JPEG.'));img.src=objectUrl;});
-    let edge=1400, quality=.80, dataUrl='';
-    for(let attempt=0;attempt<7;attempt++){
-      const scale=Math.min(1,edge/Math.max(img.naturalWidth,img.naturalHeight));
-      const canvas=document.createElement('canvas');
-      canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
-      canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
-      const context=canvas.getContext('2d');
-      if(!context)throw Error('Traitement de la photo indisponible sur cet appareil.');
-      context.fillStyle='#fff';context.fillRect(0,0,canvas.width,canvas.height);
-      context.drawImage(img,0,0,canvas.width,canvas.height);
-      dataUrl=canvas.toDataURL('image/jpeg',quality);
-      canvas.width=0;canvas.height=0;
-      if(dataUrl.startsWith('data:image/jpeg;base64,')&&dataUrl.length<650000)break;
-      edge=Math.max(650,Math.round(edge*.83));quality=Math.max(.62,quality-.035);
-    }
-    if(!dataUrl.startsWith('data:image/jpeg;base64,')||dataUrl.length>700000)
-      throw Error('Impossible de réduire suffisamment la photo. Essayez une photo moins lourde.');
-    return {dataUrl,base64:dataUrl.split(',')[1]};
-  }finally{URL.revokeObjectURL(objectUrl);}
+// Le JPEG enregistré contient le cadrage : aucun cadrage différent côté public.
+let cropImage=null, cropUrl='', cropRevision=0;
+function clearCrop(){
+  cropRevision++;cropImage=null;
+  if(cropUrl)URL.revokeObjectURL(cropUrl);cropUrl='';
+  $('#crop-controls').hidden=true;
 }
+async function compressPhoto(file){
+  if(!file||file.size>20_000_000)throw Error('Photo trop volumineuse : maximum 20 Mo.');
+  if(file.type && !/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type))throw Error('Format non pris en charge. Choisissez une photo JPEG, PNG ou WebP.');
+  clearCrop();
+  photoState.base64='';photoState.preview='';
+  const revision=cropRevision;
+  cropUrl=URL.createObjectURL(file);
+  const img=new Image();
+  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('Cette photo ne peut pas être ouverte sur cet appareil. Choisissez une autre photo ou prenez une photo avec le bouton appareil.'));img.src=cropUrl;});
+  if(revision!==cropRevision)return null;
+  cropImage=img;
+  $('#crop-x').value=50;$('#crop-y').value=50;$('#crop-zoom').value=1;
+  $('#crop-controls').hidden=false;
+  return renderCrop();
+}
+function renderCrop(){
+  if(!cropImage)return null;
+  const img=cropImage, zoom=Number($('#crop-zoom').value);
+  const fit=Math.min(1200/img.naturalWidth,900/img.naturalHeight);
+  const scale=fit*zoom, w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+  const x=(1200-w)*Number($('#crop-x').value)/100;
+  const y=(900-h)*Number($('#crop-y').value)/100;
+  const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=900;
+  const ctx=canvas.getContext('2d');if(!ctx)throw Error('Traitement photo indisponible sur cet appareil.');
+  ctx.fillStyle='#FBF6EE';ctx.fillRect(0,0,1200,900);ctx.drawImage(img,x,y,w,h);
+  let quality=.86,dataUrl='';
+  for(let attempt=0;attempt<9;attempt++){
+    dataUrl=canvas.toDataURL('image/jpeg',quality);
+    if(dataUrl.length<640000)break;
+    quality-=.07;
+  }
+  if(!dataUrl.startsWith('data:image/jpeg;base64,')||dataUrl.length>=640000)throw Error('Photo trop détaillée pour être enregistrée. Essayez une autre photo.');
+  photoState.base64=dataUrl.split(',')[1];photoState.preview=dataUrl;photoState.key=crypto.randomUUID();
+  $('#photo-preview').src=dataUrl;$('#photo-preview').hidden=false;
+  return {dataUrl,base64:photoState.base64};
+}
+for(const selector of ['#crop-x','#crop-y','#crop-zoom']){
+  $(selector).addEventListener('input',()=>{
+    if(state.busy||photoState.busy)return;
+    try{renderCrop();$('#photo-help').textContent='Cadrage prêt. Enregistrez la fiche pour le publier.';}
+    catch(error){photoState.base64='';notice(error.message);}
+  });
+}
+$('#product-modal').addEventListener('close',()=>{photoJob++;photoState.busy=false;clearCrop();});
+$('#product-modal').addEventListener('cancel',event=>{if(state.busy)event.preventDefault();});
 function renderCatalogue(){
   const ps=state.data?.products||[];
   return `<div class="row space wrap" style="margin-bottom:13px"><h2>Les plats</h2><button type="button" id="new-product" class="btn primary">+ Nouveau plat</button></div><div class="notice">Modification directe des stocks et prix du Google Sheets « Catalogue ». Les informations du site public se mettent à jour à son prochain chargement.</div><div class="catalogue-grid">${ps.map(p=>`<article class="product" data-product="${esc(p.id)}"><div class="head"><h3>${esc(p.name)}</h3><label class="row"><input type="checkbox" class="product-active" ${p.active?'checked':''}> <span class="short">Publié</span></label></div>${p.image?`<img class="product-thumb" src="${esc(photoUrl(p.image))}" loading="lazy" alt="Photo de ${esc(p.name)}">`:''}<div class="row space" style="margin-top:9px"><span class="muted short">${esc(p.conservation)} · ${p.dlc?'DLC renseignée':'DLC à renseigner'}</span><button type="button" class="btn secondary product-edit">Modifier la fiche</button></div>${p.variants.filter(v=>v.id!=='fam').map(v=>`<div class="variant" data-variant="${esc(v.id)}"><div><b class="short">${esc(v.label)}</b><label class="row"><input type="checkbox" class="variant-active" style="width:16px;min-height:16px" ${v.active?'checked':''}> Format actif</label></div><label>Prix (€)<input type="number" class="price" min="0" max="1000" step="0.01" value="${v.price}"></label><label>Stock<input type="number" class="stock" min="0" max="9999" step="1" value="${v.stock}"></label><button type="button" class="btn secondary product-save">Enregistrer</button></div>`).join('')}</article>`).join('')}</div>`;
@@ -159,7 +186,7 @@ function render(){
 }
 function nav(page){if(!pages[page])return;state.page=page;render();window.scrollTo({top:0,behavior:'smooth'});}
 function manualOptions(){
-  return (state.data?.products||[]).filter(p=>p.active).flatMap(p=>p.variants.filter(v=>v.active&&v.stock>0).map(v=>`<option value="${esc(p.id+'|'+v.id)}">${esc(p.name)} · ${esc(v.label)} (${eur(v.price)}, stock ${v.stock})</option>`)).join('');
+  return (state.data?.products||[]).filter(p=>p.active).flatMap(p=>p.variants.filter(v=>v.id!=='fam'&&v.active&&v.stock>0).map(v=>`<option value="${esc(p.id+'|'+v.id)}">${esc(p.name)} · ${esc(v.label)} (${eur(v.price)}, stock ${v.stock})</option>`)).join('');
 }
 function addManualLine(){
   const div=document.createElement('div');div.className='manual-line';
@@ -173,6 +200,7 @@ function openManual(){
   $('#manual-modal').showModal();
 }
 document.addEventListener('click',async e=>{
+  if(state.busy){e.preventDefault();return;}
   const tab=e.target.closest('[data-page]');if(tab){nav(tab.dataset.page);return;}
   const closer=e.target.closest('[data-close]');if(closer){document.getElementById(closer.dataset.close)?.close();return;}
   if(e.target.closest('#new-product')){const form=$('#product-form');form.reset();form.elements.name.readOnly=false;form.elements.price.disabled=false;form.elements.stock.disabled=false;form.elements.editId.value='';$('#duo-active').disabled=false;$('#duo-active').checked=false;$('#product-title').textContent='Créer une fiche plat';$('#save-product-details').textContent='Enregistrer le brouillon';resetPhoto(null);toggleDuoFields();$('#product-modal').showModal();return;}
@@ -189,37 +217,52 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('#add-line')){addManualLine();return;}
   if(e.target.closest('.manual-line .remove')){const lines=document.querySelectorAll('.manual-line');if(lines.length>1)e.target.closest('.manual-line').remove();return;}
   const payment=e.target.closest('.payment-toggle');if(payment){const card=payment.closest('[data-id]');const order=orders().find(x=>x.id===card.dataset.id);if(order)await mutate({action:'payment',id:order.id,payment:order.payment==='Réglée'?'Non réglée':'Réglée'});return;}
-  const product=e.target.closest('.product-save');if(product){const card=product.closest('[data-product]'),line=product.closest('[data-variant]');const price=Number(line.querySelector('.price').value),stock=Number(line.querySelector('.stock').value);if(!Number.isFinite(price)||!Number.isInteger(stock)){notice('Prix ou stock incorrect');return;}await mutate({action:'product',id:card.dataset.product,variant:line.dataset.variant,price,stock,variantActive:line.querySelector('.variant-active').checked});return;}
+  const product=e.target.closest('.product-save');if(product){
+    const card=product.closest('[data-product]'),line=product.closest('[data-variant]');
+    const original=state.data.products.find(p=>p.id===card.dataset.product)?.variants.find(v=>v.id===line.dataset.variant);if(!original)return;
+    const payload={action:'product',id:card.dataset.product,variant:line.dataset.variant,expected:{}};
+    const changes={price:Number(line.querySelector('.price').value),stock:Number(line.querySelector('.stock').value),variantActive:line.querySelector('.variant-active').checked};
+    for(const [key,value] of Object.entries(changes)){const old=key==='variantActive'?original.active:original[key];if(value!==old){payload[key]=value;payload.expected[key]=old;}}
+    if(Object.keys(payload.expected).length)await mutate(payload);else notice('Aucun changement.');return;
+  }
   if(e.target.closest('#remove-photo')){
     const id=$('#product-form').elements.editId.value;
-    if(!id||state.busy)return;
-    if(!window.confirm('Supprimer la photo de ce plat sur le site et dans Drive ?'))return;
-    if(await mutate({action:'photoDelete',id})){
+    if(!id||state.busy||photoState.busy)return;
+    if(!window.confirm('Retirer cette photo ? Un fichier externe ou encore utilisé sera conservé.'))return;
+    if(await mutate({action:'photoDelete',id,expectedImage:photoState.expectedImage})){
       const updated=state.data?.products?.find(p=>p.id===id);
       resetPhoto(updated);notice('Photo supprimée.');
     }
     return;
   }
-  const slot=e.target.closest('.slot-save');if(slot){const card=slot.closest('[data-date]');await mutate({action:'slot',date:card.dataset.date,time:card.dataset.time,available:Number(card.querySelector('.places').value),active:card.querySelector('.slot-active').checked});return;}
+  const slot=e.target.closest('.slot-save');if(slot){
+    const card=slot.closest('[data-date]');const original=state.data.slots.find(s=>s.date===card.dataset.date&&s.time===card.dataset.time);if(!original)return;
+    const payload={action:'slot',date:card.dataset.date,time:card.dataset.time,expected:{}};
+    for(const [key,value] of Object.entries({available:Number(card.querySelector('.places').value),active:card.querySelector('.slot-active').checked})){
+      if(value!==original[key]){payload[key]=value;payload.expected[key]=original[key];}
+    }
+    if(Object.keys(payload.expected).length)await mutate(payload);else notice('Aucun changement.');return;
+  }
 });
 document.addEventListener('change',async e=>{
   if(e.target.matches('#duo-active')){toggleDuoFields();return;}
   if(e.target.matches('#photo-camera, #photo-library')){
-    const file=e.target.files?.[0];if(!file)return;
+    const file=e.target.files?.[0];if(!file||state.busy||photoState.busy)return;
+    const job=++photoJob;
     photoState.busy=true;$('#photo-help').textContent='Préparation de la photo…';
     try{
-      const photo=await compressPhoto(file);
+      const photo=await compressPhoto(file);if(!photo||job!==photoJob)return;
       photoState.base64=photo.base64;photoState.preview=photo.dataUrl;
       $('#photo-preview').src=photo.dataUrl;$('#photo-preview').hidden=false;
       $('#photo-help').textContent='Photo prête à être enregistrée avec la fiche.';
-    }catch(error){photoState.base64='';photoState.preview='';$('#photo-help').textContent=error.message;notice(error.message);}
-    finally{photoState.busy=false;}
+    }catch(error){if(job!==photoJob)return;photoState.base64='';photoState.preview='';$('#photo-help').textContent=error.message;notice(error.message);}
+    finally{if(job===photoJob)photoState.busy=false;e.target.value='';}
     return;
   }
   if(e.target.matches('#filter-status')){state.status=e.target.value;renderOrderResults();}
   else if(e.target.matches('#filter-date')){state.date=e.target.value;renderOrderResults();}
   else if(e.target.matches('.order-status')){const card=e.target.closest('[data-id]');const id=card?.dataset.id,stat=e.target.value;if(stat==='Annulée'&&!window.confirm('Annuler la commande et rétablir les stocks ?')){render();return;}await mutate({action:'status',id,status:stat});}
-  else if(e.target.matches('.product-active')){const id=e.target.closest('[data-product]').dataset.product;await mutate({action:'product',id,active:e.target.checked});}
+  else if(e.target.matches('.product-active')){const id=e.target.closest('[data-product]').dataset.product;const old=state.data.products.find(p=>p.id===id)?.active;await mutate({action:'product',id,active:e.target.checked,expected:{active:old}});}
 });
 document.addEventListener('input',e=>{if(e.target.matches('#search-order')){state.query=e.target.value;renderOrderResults();}else if(e.target.matches('#client-search')){const q=e.target.value.toLowerCase();document.querySelectorAll('.client[data-client-search]').forEach(el=>{el.style.display=el.dataset.clientSearch.includes(q)?'':'none';});}});
 $('#manual-form').addEventListener('submit',async e=>{
@@ -228,8 +271,8 @@ $('#manual-form').addEventListener('submit',async e=>{
   const items=[...form.querySelectorAll('.manual-line')].map(line=>{const [platId,variantId]=line.querySelector('.manual-product').value.split('|');const product=state.data.products.find(p=>p.id===platId);return {platId,variantId,conservation: 'Frais',qty:Number(line.querySelector('.manual-qty').value),_name:product?.name};});
   // La conservation réelle du plat doit venir du catalogue (non de l'interface).
   // On la récupère de la feuille PLATS côté serveur en mode saisie manuelle.
-  const payload={action:'manualOrder',name:values.get('name'),phone:values.get('phone'),email:values.get('email'),note:values.get('note'),pickupDate,pickupTime,items:items.map(({_name,...rest})=>rest),requestKey:crypto.randomUUID()};
-  if(await mutate(payload)){$('#manual-modal').close();nav('commandes');}
+  const payload={action:'manualOrder',name:values.get('name'),phone:values.get('phone'),email:values.get('email'),note:values.get('note'),pickupDate,pickupTime,items:items.map(({_name,...rest})=>rest),requestKey:await stableManualKey({name:values.get('name'),phone:values.get('phone'),email:values.get('email'),note:values.get('note'),pickupDate,pickupTime,items})};
+  if(await mutate(payload)){clearManualKey();$('#manual-modal').close();nav('commandes');}
 });
 refresh(true);
 
@@ -248,20 +291,27 @@ $('#product-form').addEventListener('submit',async e=>{
   const data=new FormData(e.currentTarget);
   const editId=String(data.get('editId')||'');
   const details={description:data.get('description'),ingredients:data.get('ingredients'),allergens:data.get('allergens'),dlc:data.get('dlc'),reheating:data.get('reheating'),conservation:data.get('conservation')};
-  const payload=editId?{action:'product',id:editId,details}:{action:'productCreate',name:data.get('name'),...details,
+  const original=state.data.products.find(p=>p.id===editId);
+  const expected={};
+  if(editId){for(const key of Object.keys(details)){if(details[key]===(original?.[key]||''))delete details[key];else expected[key]=original?.[key]||'';}}
+  const payload=editId?{action:'product',id:editId,details,expected}:{action:'productCreate',name:data.get('name'),...details,
     price:Number(data.get('price')),stock:Number(data.get('stock')),
     active2:data.has('active2'),price2:Number(data.get('price2')),stock2:Number(data.get('stock2'))};
   state.busy=true;
   $('#save-product-details').disabled=true;
+  document.querySelectorAll('#photo-camera,#photo-library,#crop-controls input,#remove-photo').forEach(el=>el.disabled=true);
   let savedDetails=false;
   try{
     const result=await api(payload);
     savedDetails=true;
     const id=editId||result.id;
+    $('#product-form').elements.editId.value=id;$('#product-form').elements.name.readOnly=true;
+    if(original)Object.assign(original,details);else state.data.products.push({id,...details,image:'',variants:[]});
     if(photoState.base64){
       if(!id)throw Error('Fiche créée, mais identifiant photo manquant. Réouvrez la fiche pour ajouter la photo.');
       $('#photo-help').textContent='Enregistrement de la photo dans Drive…';
-      await api({action:'photoUpload',id,jpegBase64:photoState.base64});
+      const uploaded=await api({action:'photoUpload',id,jpegBase64:photoState.base64,requestKey:photoState.key,expectedImage:photoState.expectedImage});
+      photoState.expectedImage=uploaded.image;
     }
     $('#product-modal').close();
     await refresh(true);
@@ -269,8 +319,27 @@ $('#product-form').addEventListener('submit',async e=>{
     notice(photoState.base64?'Fiche et photo enregistrées.':'Fiche enregistrée.');
   }catch(error){
     if(savedDetails){
-      $('#product-modal').close();await refresh(true);nav('catalogue');
-      window.alert('La fiche a été enregistrée, mais la photo n’a pas été enregistrée : '+error.message+'\nVous pouvez reprendre la photo depuis « Modifier la fiche ».');
+      await refresh(true);
+      window.alert('La fiche a été enregistrée, mais la photo n’a pas été enregistrée : '+error.message+'\nVotre photo et son cadrage restent ici : réessayez Enregistrer.');
     }else notice(error.message);
-  }finally{state.busy=false;$('#save-product-details').disabled=false;}
+  }finally{state.busy=false;$('#save-product-details').disabled=false;document.querySelectorAll('#photo-camera,#photo-library,#crop-controls input,#remove-photo').forEach(el=>el.disabled=false);}
 });
+
+let manualMemory=null;
+async function stableManualKey(body){
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(body)));
+  const signature=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');let saved=manualMemory;
+  try{saved=JSON.parse(sessionStorage.getItem('laure-manual-request')||'null')||saved;}catch(e){}
+  if(!saved||saved.signature!==signature)saved={signature,key:crypto.randomUUID()};
+  manualMemory=saved;
+  try{sessionStorage.setItem('laure-manual-request',JSON.stringify(saved));}catch(e){}
+  return saved.key;
+}
+function clearManualKey(){manualMemory=null;try{sessionStorage.removeItem('laure-manual-request');}catch(e){}}
+
+document.addEventListener('error',event=>{
+  const img=event.target;if(!img.matches?.('.product-thumb,#photo-preview'))return;
+  img.hidden=true;
+  if(img.id==='photo-preview')$('#photo-help').textContent='Photo enregistrée, aperçu indisponible. Vous pouvez la remplacer.';
+  else {const label=document.createElement('div');label.className='product-thumb photo-empty';label.textContent='Photo indisponible';img.replaceWith(label);}
+},true);

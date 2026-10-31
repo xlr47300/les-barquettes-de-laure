@@ -7,8 +7,8 @@
 <meta name="description" content="Des petits plats maison cuisinés en petites quantités, à retirer près de Villeneuve-sur-Lot.">
 <meta name="theme-color" content="#FBF6EE">
 <link rel="icon" type="image/png" href="uploads/Logo%20les%20barquettes%20de%20Laure.png">
-<script src="./site-data.js"></script>
-<script src="/laure-order.js" defer></script>
+<script src="./site-data.js?v=stable-5"></script>
+<script src="/laure-order.js?v=stable-5" defer></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <script src="./support.js"></script>
 </head>
@@ -103,7 +103,7 @@
       <section>
         <div style="{{ heroWrap }}">
           <div style="flex:1 1 400px;min-width:260px;display:flex;flex-direction:column;gap:16px">
-            <span style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:#EAEFE2;color:#4E6141;font:500 11px/1 'Work Sans';letter-spacing:.1em;text-transform:uppercase;width:fit-content">Cette semaine · 6 plats au menu</span>
+            <span style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:#EAEFE2;color:#4E6141;font:500 11px/1 'Work Sans';letter-spacing:.1em;text-transform:uppercase;width:fit-content">Les plats de Laure</span>
             <h1 style="{{ heroTitleStyle }}">Des petits plats maison, prêts quand vous l'êtes.</h1>
             <p style="{{ heroTextStyle }}">Pour ce soir, pour la semaine ou pour remplir le congélateur, je prépare des recettes généreuses en petites quantités, à retirer près de Villeneuve-sur-Lot.</p>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">
@@ -117,8 +117,8 @@
           <div style="{{ heroPhoto }}">
             <div style="position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.16) 0 2px,transparent 2px 13px)"></div>
             <div style="position:absolute;left:18px;top:18px;right:18px;display:flex;flex-direction:column;gap:7px">
-              <span style="font:500 10px/1 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:#8A4B2A;background:rgba(251,246,238,.85);padding:7px 11px;border-radius:999px;width:fit-content">Photographie à fournir</span>
-              <span style="font:400 12.5px/1.45 'Work Sans';color:#7A5238;background:rgba(251,246,238,.7);padding:8px 11px;border-radius:10px;max-width:22em">Plan large : trois barquettes étiquetées sur un plan de travail clair, une assiette servie au premier plan, lumière du jour.</span>
+              <span style="font:500 10px/1 'Work Sans';letter-spacing:.16em;text-transform:uppercase;color:#8A4B2A;background:rgba(251,246,238,.85);padding:7px 11px;border-radius:999px;width:fit-content">Cuisine maison</span>
+              <span style="font:400 12.5px/1.45 'Work Sans';color:#7A5238;background:rgba(251,246,238,.7);padding:8px 11px;border-radius:10px;max-width:22em">Des recettes préparées en petites quantités.</span>
             </div>
             <div style="position:absolute;right:18px;bottom:18px;display:flex;gap:8px">
               <span style="width:52px;height:36px;border-radius:6px;background:rgba(251,246,238,.55);border:1px dashed rgba(138,75,42,.35)"></span>
@@ -325,11 +325,11 @@
       <section style="{{ sectionStyle }}">
         <div style="{{ signupWrap }}">
           <div style="flex:1 1 280px;min-width:240px">
-            <h2 style="{{ h2GreenStyle }}">Recevoir le menu de la semaine</h2>
+            <h2 style="{{ h2GreenStyle }}">Retrouver les plats disponibles</h2>
             <p style="margin:10px 0 0;font:300 14.5px/1.6 'Work Sans';color:#4E6141;max-width:32em">Les plats évoluent selon les préparations de la semaine. Retrouvez ici les prochaines disponibilités.</p>
           </div>
           <div style="flex:1 1 300px;min-width:240px;display:flex;align-items:center">
-            <p style="font:400 14px/1.6 'Work Sans';color:#4E6141">L'inscription à la liste de diffusion sera proposée prochainement. Pour l'instant, vous pouvez contacter Laure directement.</p>
+            <p style="font:400 14px/1.6 'Work Sans';color:#4E6141">Consultez les plats et les prochains retraits sur ce site, ou contactez Laure directement.</p>
           </div>
         </div>
       </section>
@@ -1007,7 +1007,7 @@ let MOMENTS = [
   { icon:'assiette', titre:'Pour ce soir', texte:"Ce qui est prêt aujourd'hui, à réchauffer en dix minutes.", lien:'Voir le frais', filtre:{ conservation:'Frais' } },
   { icon:'calendrier', titre:'Pour la semaine', texte:'Quatre ou cinq portions à faire tourner du lundi au vendredi.', lien:'Voir tous les plats', filtre:{} },
   { icon:'flocon', titre:'Pour le congélateur', texte:'Des plats pensés pour être surgelés, étiquetés et empilés.', lien:'Voir le surgelé', filtre:{ conservation:'Surgelé' } },
-  { icon:'cadeau', titre:'Pour ceux que vous aimez', texte:"Un parent, un voisin, une jeune maman : je prépare et j'étiquette.", lien:'Voir les formats familiaux', filtre:{ format:'Familial' } }
+  { icon:'cadeau', titre:'Pour ceux que vous aimez', texte:"Un parent, un voisin, une jeune maman : je prépare et j'étiquette.", lien:'Voir les formats 2 personnes', filtre:{ format:'2 personnes' } }
 ];
 
 let ETAPES = [
@@ -1063,6 +1063,9 @@ class Component extends DCLogic {
   componentDidMount() {
     this._onResize = () => this.setState({ vw: window.innerWidth });
     window.addEventListener('resize', this._onResize);
+    this._clockTimer=setInterval(()=>this.setState({dataVersion:Date.now()}),30000);
+    this._onOrderConfig=()=>this.setState({dataVersion:Date.now()});
+    window.addEventListener('laure-orders-config',this._onOrderConfig);
     this.loadGoogleSheet();
   }
   componentDidUpdate() {
@@ -1071,7 +1074,7 @@ class Component extends DCLogic {
       setTimeout(() => window.LaureOrders.ensureWidget(), 0);
     }
   }
-  componentWillUnmount() { window.removeEventListener('resize', this._onResize); clearTimeout(this._t); }
+  componentWillUnmount() { clearInterval(this._clockTimer);window.removeEventListener('laure-orders-config',this._onOrderConfig);window.removeEventListener('resize', this._onResize); clearTimeout(this._t); }
 
   loadGoogleSheet() {
     this._catalogueUnavailable = true;
@@ -1113,19 +1116,26 @@ class Component extends DCLogic {
     if (retry) retry.style.display = 'inline-block';
   }
 
+  slotIsOpen(day,slot) {
+    const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Paris'}).format(new Date());
+    const clock=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
+    const match=String(slot.label||'').match(/^([01]?\d|2[0-3])h([0-5]\d)$/);
+    return slot.restant>0&&!!match&&(day.dateRaw>today||(day.dateRaw===today&&match[1].padStart(2,'0')+':'+match[2]>clock));
+  }
+
   ordersAvailable() {
-    return !this._catalogueUnavailable && JOURS.some((day) => day.creneaux.some((slot) => slot.restant > 0));
+    return window.LaureOrders?.isEnabled() === true && !this._catalogueUnavailable && JOURS.some((day) => day.creneaux.some((slot) => this.slotIsOpen(day,slot)));
   }
 
   applySheetCopy() {
     if (!this._sheetTextes) return;
     const defaults = {
       'identite.nom': 'Les Barquettes de Laure',
-      'accueil.hero.badge': 'Cette semaine · 6 plats au menu',
+      'accueil.hero.badge': 'Les plats de Laure',
       'accueil.hero.titre': "Des petits plats maison, prêts quand vous l'êtes.",
       'accueil.hero.texte': 'Pour ce soir, pour la semaine ou pour remplir le congélateur, je prépare des recettes généreuses en petites quantités, à retirer près de Villeneuve-sur-Lot.',
       'accueil.hero.cta': 'Voir les plats disponibles',
-      'accueil.hero.photo': 'Plan large : trois barquettes étiquetées sur un plan de travail clair, une assiette servie au premier plan, lumière du jour.',
+      'accueil.hero.photo': 'Des recettes préparées en petites quantités.',
       'accueil.selection.surtitre': 'Prêt à emporter',
       'accueil.selection.titre': 'En ce moment chez Laure',
       'accueil.selection.texte': 'Cuisiné cette semaine, en quantités limitées. Ce qui est parti est parti.',
@@ -1141,7 +1151,7 @@ class Component extends DCLogic {
       'accueil.laure.titre': 'Une cuisine de maison, simplement.',
       'accueil.laure.texte': "J'ai longtemps cuisiné pour les autres sans jamais compter. Aujourd'hui je prépare chaque semaine quelques plats mijotés dans ma cuisine, près de Villeneuve-sur-Lot : ce que j'aime faire, avec les légumes du marché et des recettes de famille.",
       'accueil.hero.cta2': 'Comment ça marche',
-      'accueil.newsletter.titre': 'Recevoir le menu de la semaine',
+      'accueil.newsletter.titre': 'Retrouver les plats disponibles',
       'accueil.newsletter.texte': "Chaque lundi, je vous envoie la liste des plats et les créneaux de retrait. Un message par semaine, rien d'autre.",
       'plats.titre': 'Les plats de Laure',
       'plats.texte': "Ce qui est prêt aujourd'hui, et ce que je peux cuisiner pour un prochain retrait. Les quantités indiquées sont réelles.",
@@ -1175,6 +1185,7 @@ class Component extends DCLogic {
   icon(name) { return ICONS[name] || ICONS.barquette; }
 
   nav(route) {
+    if(this.state.route==='confirm'&&route!=='confirm')window.LaureOrders?.newRequest();
     if (route === 'commande' && !this.ordersAvailable()) {
       this.flash('Les commandes sont fermées : aucun créneau de retrait disponible.');
       return;
@@ -1261,7 +1272,7 @@ class Component extends DCLogic {
 
   photoBox(tint, h, url) {
     const safeUrl = String(url || '').replace(/["\\]/g, '');
-    const background = safeUrl ? 'url("' + safeUrl + '") center/cover no-repeat' : 'linear-gradient(145deg,' + tint[0] + ',' + tint[1] + ')';
+    const background = safeUrl ? 'url("' + safeUrl + '") center/contain no-repeat #FBF6EE' : 'linear-gradient(145deg,' + tint[0] + ',' + tint[1] + ')';
     return 'position:relative;overflow:hidden;height:' + h + ';background:' + background;
   }
 
@@ -1302,12 +1313,12 @@ class Component extends DCLogic {
       ...p,
       formatCourt: p.variants.length + ' formats',
       conservationLabel: p.conservations.join(' · '),
-      prixLabel: 'dès ' + this.euro(v0.prix),
+      prixLabel: 'dès ' + this.euro(Math.min(...p.variants.map(v => v.prix))),
       dispoLabel,
       dispoStyle: "font:400 11.5px/1.4 'Work Sans';color:" + (p.dispo === 'low' ? '#B24A26' : p.dispo === 'preco' ? '#8A4B2A' : '#4E6141'),
       ctaLabel: !this.ordersAvailable() ? 'Commandes fermées' : p.dispo === 'soldout' ? 'Épuisé' : p.dispo === 'preco' ? 'Réserver' : 'Ajouter',
       ctaDisabled: !this.ordersAvailable() || p.dispo === 'soldout',
-      photoStyle: this.photoBox(p.tint, '180px', (p.photos || [])[0]),
+      photoStyle: this.photoBox(p.tint, 'auto', (p.photos || [])[0]) + ';aspect-ratio:4/3',
       overlayStyle: (p.photos || []).length ? 'display:none' : 'position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 12px)',
       badges: this.badgeList(this.ordersAvailable() ? p.badges : p.badges.filter(b => !['Disponible maintenant', 'Presque épuisé'].includes(b)).concat('Commandes fermées')),
       thumbStyle: this.photoBox(p.tint, '88px', (p.photos || [])[0]) + ';width:88px;flex:none;border-radius:12px',
@@ -1322,8 +1333,8 @@ class Component extends DCLogic {
     const s = this.state;
     const stock = this._sheetSettings?.['commande.afficher_stock'] ? this._sheetSettings['commande.afficher_stock'] === 'Oui' : this.props.afficherStock !== false;
     const delai = this._sheetSettings?.['commande.delai_reponse'] || this.props.dureeReponse || 'dans les deux heures';
-    const contactPhone = this._sheetSettings?.['contact.telephone'] || '06 12 34 56 78';
-    const contactEmail = this._sheetSettings?.['contact.email'] || 'bonjour@barquettesdelaure.fr';
+    const contactPhone = this._sheetSettings?.['contact.telephone'] || 'Téléphone à renseigner';
+    const contactEmail = this._sheetSettings?.['contact.email'] || 'Email à renseigner';
     const logoUrl = this._sheetSettings?.['asset.logo'] || 'uploads/Logo%20les%20barquettes%20de%20Laure.png';
     const isMobile = s.vw < 900;
 
@@ -1349,10 +1360,10 @@ class Component extends DCLogic {
     const f = s.filters;
     const platsFiltres = plats.filter(p => {
       if (f.conservation !== 'Tous' && p.conservations.indexOf(f.conservation) < 0) return false;
-      if (f.dispo === 'Disponible maintenant' && p.dispo === 'preco') return false;
+      if (f.dispo === 'Disponible maintenant' && ['preco','soldout'].includes(p.dispo)) return false;
       if (f.dispo === 'Précommande' && p.dispo !== 'preco') return false;
-      if (f.format === 'Individuel' && p.variants[0].prix > 10.5) return false;
-      if (f.format === 'Familial' && !p.variants.some(v => v.id === 'fam')) return false;
+      if (f.format === 'Individuel' && !p.variants.some(v => v.id === 'indiv')) return false;
+      if (f.format === '2 personnes' && !p.variants.some(v => v.id === 'duo')) return false;
       return true;
     });
     const chip = (on) => "min-height:42px;padding:12px 15px;border-radius:999px;cursor:pointer;font:" + (on ? '500' : '400') + " 13px/1 'Work Sans';border:1px solid " + (on ? 'transparent' : 'rgba(138,75,42,.22)') + ';background:' + (on ? '#2E2723' : 'transparent') + ';color:' + (on ? '#FBF6EE' : '#584C43');
@@ -1389,7 +1400,7 @@ class Component extends DCLogic {
         select:() => this.setState({ jour:j.id, creneau:(j.creneaux.find(c => c.restant > 0) || {}).id }) };
     });
     const creneaux = jourObj.creneaux.map(c => {
-      const on = c.id === s.creneau, full = c.restant === 0;
+      const on = c.id === s.creneau, full = !this.slotIsOpen(jourObj,c);
       return { label:c.label, restant: full ? 'complet' : c.restant + ' places',
         style:'display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-height:58px;padding:11px 14px;border-radius:14px;cursor:' + (full ? 'not-allowed' : 'pointer') + ';border:1.5px solid ' + (on ? '#C9613F' : 'rgba(138,75,42,.18)') + ';background:' + (on ? '#C9613F' : full ? '#F0EAE2' : '#FFFDF9') + ';color:' + (on ? '#FBF6EE' : full ? '#A9998C' : '#2E2723') + ";font:500 14px/1 'Work Sans';" + (full ? 'text-decoration:line-through;' : ''),
         select:() => { if (!full) this.setState({ creneau:c.id }); } };
@@ -1399,7 +1410,7 @@ class Component extends DCLogic {
       ? jourObj.jour + ' ' + jourObj.date + (creneauObj ? ' · ' + creneauObj.label : ' · créneau à choisir')
       : 'Aucun retrait disponible pour le moment';
 
-    const formOk = this.ordersAvailable() && s.form.ok && s.form.nom.trim().length > 1 && s.form.tel.replace(/\D/g, '').length >= 9 && !!creneauObj && creneauObj.restant > 0 && count > 0;
+    const formOk = this.ordersAvailable() && s.form.ok && s.form.nom.trim().length > 1 && s.form.tel.replace(/\D/g, '').length >= 9 && !!creneauObj && this.slotIsOpen(jourObj,creneauObj) && count > 0;
     const mobileTabs = [
       { icon:'maison', label:'Accueil', key:'home', go:() => this.nav('home') },
       { icon:'marmite', label:'Les plats', key:'plats', go:() => this.nav('plats') },
@@ -1466,7 +1477,7 @@ class Component extends DCLogic {
       resultLabel: platsFiltres.length + (platsFiltres.length > 1 ? ' plats' : ' plat') + ' · ' + dispos.length + " prêts aujourd'hui, " + precos.length + ' sur réservation',
       filterGroups: [
         group('conservation', 'Conservation', ['Tous', 'Frais', 'Sous vide', 'Surgelé']),
-        group('format', 'Format', ['Tous', 'Individuel', 'Familial']),
+        group('format', 'Format', ['Tous', 'Individuel', '2 personnes']),
         group('dispo', 'Disponibilité', ['Tous', 'Disponible maintenant', 'Précommande'])
       ],
       resetFilters: () => this.setState({ filters:{ conservation:'Tous', format:'Tous', dispo:'Tous' } }),
@@ -1496,7 +1507,7 @@ class Component extends DCLogic {
           { label:'Formats et poids', valeur:p.poids }
         ]
       },
-      ficheHeroStyle: this.photoBox(p.tint, isMobile ? '250px' : '380px', (p.photos || [])[0]) + ';border-radius:22px',
+      ficheHeroStyle: this.photoBox(p.tint, 'auto', (p.photos || [])[0]) + ';aspect-ratio:4/3;border-radius:22px',
       ficheOverlayStyle: (p.photos || []).length ? 'display:none' : 'position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.15) 0 2px,transparent 2px 13px)',
       ficheQty: s.ficheQty,
       ficheAddLabel: !this.ordersAvailable() ? 'Commandes fermées' : (p.dispo === 'preco' ? 'Réserver · ' : 'Ajouter · ') + this.euro(variant.prix * s.ficheQty),
@@ -1557,14 +1568,13 @@ class Component extends DCLogic {
           consent:s.form.ok, pickupDate:jourObj.dateRaw, pickupTime:creneauObj.label,
           items:s.cart.map(l=>({platId:l.platId,variantId:l.variantId,conservation:l.conservation,qty:l.qty}))
         };
-        const signature=JSON.stringify(body);
-        if (!this._lastOrder || this._lastOrder.signature!==signature) this._lastOrder={signature,key:crypto.randomUUID()};
-        body.requestKey=this._lastOrder.key;
         this.setState({sending:true,formError:''});
         try {
+          body.requestKey=await window.LaureOrders.requestKey(body);
           const result=await window.LaureOrders.submit(body);
           if (!result || !result.orderId) throw new Error('Référence de réservation absente');
-          this.setState({ref:result.orderId,sending:false,formError:''});
+          if(!Number.isFinite(result.total)||!Array.isArray(result.items)||!result.items.length)throw new Error('Montant de réservation absent');
+          this.setState({ref:result.orderId,sending:false,formError:'',cart:[],accepted:{lines:result.items.map((line,index)=>({...cartLines[index],nom:line.name,variantLabel:line.variantLabel,conservation:line.conservation,qty:line.qty,prix:line.unitPrice,total:this.euro(line.lineTotal)})),total:result.total,prenom:s.form.nom.trim().split(' ')[0],retrait:creneauResume}});
           this.nav('confirm');
         } catch(error) {
           this.setState({sending:false,formError:error.message||'La réservation n’a pas été envoyée.'});
@@ -1572,11 +1582,11 @@ class Component extends DCLogic {
       },
       onSignup:(e) => { e.preventDefault(); this.flash("L'inscription à la liste de diffusion n'est pas encore ouverte. Contactez Laure directement."); },
 
-      confirmPrenom: (s.form.nom.trim().split(' ')[0] || 'Camille'),
-      confirmLines: cartLines, confirmTotal: this.euro(totalNum), orderRef: s.ref,
+      confirmPrenom: s.accepted?.prenom || s.form.nom.trim().split(' ')[0],
+      confirmLines: s.accepted?.lines || [], confirmTotal: this.euro(s.accepted?.total || 0), orderRef: s.ref,
       suites: [
-        { icon:'message', titre:'Je vérifie et je confirme', texte:'Vous recevez un SMS de ma part, en général ' + delai + ", avec l'adresse exacte du retrait." },
-        { icon:'horloge', titre:'Vous venez au créneau choisi', texte:creneauResume + '. Si vous avez un empêchement, un simple message suffit.' },
+        { icon:'message', titre:'Je vérifie et je confirme', texte:'Je vous contacte par SMS, en général ' + delai + ", avec l'adresse exacte du retrait." },
+        { icon:'horloge', titre:'Vous venez au créneau choisi', texte:(s.accepted?.retrait || creneauResume) + '. Si vous avez un empêchement, un simple message suffit.' },
         { icon:'carte', titre:'Vous réglez sur place', texte:'Espèces ou carte, au moment du retrait. Rien avant.' }
       ].map(x => ({ ...x, iconPath:this.icon(x.icon) })),
 

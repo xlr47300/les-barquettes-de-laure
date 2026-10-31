@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Petrona:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/gestion/style.css">
-  <script type="module" src="/gestion/app.js"></script>
+  <link rel="stylesheet" href="/gestion/style.css?v=stable-5">
+  <script type="module" src="/gestion/app.js?v=stable-5"></script>
 </head>
 <body>
 <div class="layout">
@@ -23,7 +23,7 @@
     <footer>Les Barquettes de Laure · Données privées · <span id="updated"></span></footer>
   </div>
 </div>
-<nav class="mobile-nav" aria-label="Navigation mobile"><button type="button" data-page="accueil">⌂<span>Accueil</span></button><button type="button" data-page="commandes">▤<span>Commandes</span></button><button type="button" data-page="cuisine">♨<span>Cuisine</span></button><button type="button" data-page="clients">♧<span>Clients</span></button><button type="button" data-page="catalogue">◫<span>Plats</span></button></nav>
+<nav class="mobile-nav" aria-label="Navigation mobile"><button type="button" data-page="accueil">⌂<span>Accueil</span></button><button type="button" data-page="commandes">▤<span>Commandes</span></button><button type="button" data-page="cuisine">♨<span>Cuisine</span></button><button type="button" data-page="clients">♧<span>Clients</span></button><button type="button" data-page="catalogue">◫<span>Plats</span></button><button type="button" data-page="retraits">◷<span>Retraits</span></button></nav>
 <div id="toast" role="status" aria-live="polite"></div>
 <dialog id="manual-modal" aria-labelledby="manual-title">
   <form id="manual-form" class="dialog-body">
@@ -53,6 +53,12 @@
 <section class="photo-editor" aria-labelledby="photo-title">
 <h3 id="photo-title">Photo du plat</h3>
 <img id="photo-preview" class="photo-preview" alt="Aperçu de la photo" hidden>
+<div id="crop-controls" hidden>
+<p class="helper">Le cadre ci-dessus est celui du site. Au départ, la photo entière est conservée. Zoomez seulement si nécessaire.</p>
+<label>Zoom<input id="crop-zoom" type="range" min="1" max="3" step="0.02" value="1"></label>
+<label>Position horizontale<input id="crop-x" type="range" min="0" max="100" value="50"></label>
+<label>Position verticale<input id="crop-y" type="range" min="0" max="100" value="50"></label>
+</div>
 <p id="photo-help" class="helper">Une photo principale, visible sur le site public.</p>
 <div class="photo-actions">
 <label class="btn secondary photo-button">📷 Prendre une photo<input id="photo-camera" type="file" accept="image/*" capture="environment" hidden></label>

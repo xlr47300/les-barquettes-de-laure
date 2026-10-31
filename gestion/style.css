@@ -18,3 +18,9 @@
 .duo-toggle{display:flex!important;align-items:center;gap:9px;grid-column:1/-1;color:var(--ink)!important}.duo-toggle[hidden]{display:none!important}
 .duo-toggle input{width:18px;min-height:18px;flex-shrink:0}.dialog-body .duo-input input{max-width:100%}
 @media(max-width:760px){.photo-button{flex:1;white-space:normal;text-align:center}.photo-actions .btn{white-space:normal}}
+
+/* Un même cadre 4:3 pour aperçu, catalogue et site public. */
+.product-thumb,.photo-preview{width:100%;height:auto;max-height:none;aspect-ratio:4/3;object-fit:contain;background:#FBF6EE}
+#crop-controls[hidden]{display:none!important}
+#crop-controls input[type=range]{width:100%;min-height:44px;accent-color:var(--sage)}
+.photo-empty{display:grid;place-items:center;color:var(--sage);border:1px solid var(--border);border-radius:12px}

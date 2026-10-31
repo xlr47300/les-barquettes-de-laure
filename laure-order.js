@@ -5,8 +5,8 @@ window.LaureOrders = (() => {
   let widgetNode = null;
   let error = null;
   const configPromise = fetch('/api/config', {cache:'no-store'})
-    .then(async response => {if (!response.ok) throw Error('Configuration indisponible'); configuration=await response.json();return configuration;})
-    .catch(e => {error=e;return null;});
+    .then(async response => {if (!response.ok) throw Error('Configuration indisponible'); configuration=await response.json();window.dispatchEvent(new Event('laure-orders-config'));return configuration;})
+    .catch(e => {error=e;window.dispatchEvent(new Event('laure-orders-config'));return null;});
   async function ensureWidget(){
     const cfg=await configPromise;
     const node=document.getElementById('laure-turnstile');
@@ -34,5 +34,16 @@ window.LaureOrders = (() => {
       try{window.turnstile.reset(widgetId);}catch(e){}
     }
   }
-  return {ensureWidget,submit};
+  let requestMemory=null;
+  async function requestKey(order){
+    const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(order)));
+    const signature=Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');
+    let old=requestMemory;try{old=JSON.parse(sessionStorage.getItem('laure-public-request')||'null')||old;}catch(e){}
+    if(!old||old.signature!==signature)old={signature,key:crypto.randomUUID()};
+    requestMemory=old;
+    try{sessionStorage.setItem('laure-public-request',JSON.stringify(old));}catch(e){}
+    return old.key;
+  }
+  function newRequest(){requestMemory=null;try{sessionStorage.removeItem('laure-public-request');}catch(e){}}
+  return {ensureWidget,submit,requestKey,newRequest,isEnabled:()=>configuration?.ordersEnabled===true};
 })();
